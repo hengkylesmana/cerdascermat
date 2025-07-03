@@ -1,8 +1,7 @@
 /**
  * HAFIZH GAMES - game.js
- * Versi: 1.0
- * Deskripsi: Logika frontend untuk game kuis "SIAPA MAU JADI DERMAWAN".
- * Mengelola state game, interaksi pengguna, dan komunikasi dengan backend AI.
+ * Versi: 2.0
+ * Deskripsi: Logika frontend yang disempurnakan dengan papan skor, suara, dan mekanisme baru.
  */
 document.addEventListener('DOMContentLoaded', () => {
     // Elemen DOM
@@ -11,62 +10,112 @@ document.addEventListener('DOMContentLoaded', () => {
     const startOverlay = document.getElementById('start-overlay');
     const startGameBtn = document.getElementById('start-game-btn');
     const headerSubtitle = document.getElementById('header-subtitle');
+    const prizeList = document.getElementById('prize-list');
+
+    // Konfigurasi Hadiah
+    const prizeTiers = [
+        { value: 100000, label: "Rp 100.000" },
+        { value: 200000, label: "Rp 200.000" },
+        { value: 300000, label: "Rp 300.000" },
+        { value: 500000, label: "Rp 500.000" },
+        { value: 1000000, label: "Rp 1.000.000", safe: true }, // Titik Aman
+        { value: 2000000, label: "Rp 2.000.000" },
+        { value: 4000000, label: "Rp 4.000.000" },
+        { value: 8000000, label: "Rp 8.000.000" },
+        { value: 16000000, label: "Rp 16.000.000" },
+        { value: 32000000, label: "Rp 32.000.000", safe: true }, // Titik Aman
+        { value: 64000000, label: "Rp 64.000.000" },
+        { value: 125000000, label: "Rp 125.000.000" },
+        { value: 250000000, label: "Rp 250.000.000" },
+        { value: 500000000, label: "Rp 500.000.000" },
+        { value: 1000000000, label: "Rp 1 Miliar", safe: true } // Hadiah Utama
+    ];
 
     // State Game
     let gameState = {
-        level: 1,
-        score: 0,
+        level: 0, // Dimulai dari 0 (indeks array)
         currentQuestion: null,
         isGameOver: false,
         isPlaying: false,
     };
 
-    // Inisialisasi
-    startGameBtn.addEventListener('click', initializeGame);
-    document.querySelector('header').addEventListener('click', () => {
-        if (gameState.isPlaying) {
-             // Mencegah reload saat game berlangsung, bisa diganti konfirmasi
-             return;
-        }
-        window.location.reload();
-    });
+    // Inisialisasi Suara dengan Tone.js
+    // URL placeholder, ganti dengan URL file suara Anda
+    const sounds = {
+        start: new Tone.Player("https://firebasestorage.googleapis.com/v0/b/rasa-426813.appspot.com/o/start.mp3?alt=media&token=35a2d5c4-5e84-473d-862d-864023c7c4b6").toDestination(),
+        correct: new Tone.Player("https://firebasestorage.googleapis.com/v0/b/rasa-426813.appspot.com/o/correct.mp3?alt=media&token=404f2a11-5e20-411a-b054-325b51a84f50").toDestination(),
+        wrong: new Tone.Player("https://firebasestorage.googleapis.com/v0/b/rasa-426813.appspot.com/o/wrong.mp3?alt=media&token=3852899a-3286-4448-a0b4-7b44383a54d4").toDestination(),
+        wait: new Tone.Synth({ oscillator: { type: "sine" }, envelope: { attack: 0.005, decay: 0.1, sustain: 0.3, release: 1 } }).toDestination()
+    };
+    
+    // Fungsi untuk berbicara (Text-to-Speech)
+    function speak(text) {
+        if (!('speechSynthesis' in window)) return;
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text.replace(/<[^>]*>/g, '')); // Hapus tag HTML
+        utterance.lang = 'id-ID';
+        utterance.rate = 1.1;
+        window.speechSynthesis.speak(utterance);
+    }
 
-    // Fungsi untuk memulai atau mereset game
-    function initializeGame() {
+    // Inisialisasi
+    function init() {
+        populatePrizeList();
+        startGameBtn.addEventListener('click', initializeGame);
+    }
+
+    function populatePrizeList() {
+        prizeList.innerHTML = '';
+        prizeTiers.forEach((tier, index) => {
+            const li = document.createElement('li');
+            li.className = 'prize-tier';
+            li.dataset.level = index;
+            li.textContent = `${index + 1}. ${tier.label}`;
+            if (tier.safe) {
+                li.classList.add('safe-haven');
+            }
+            prizeList.appendChild(li);
+        });
+    }
+
+    async function initializeGame() {
+        await Tone.start(); // Membutuhkan interaksi pengguna untuk memulai audio
+        sounds.start.start();
         startOverlay.classList.add('hidden');
-        chatContainer.innerHTML = '';
-        gameState = {
-            level: 1,
-            score: 0,
-            currentQuestion: null,
-            isGameOver: false,
-            isPlaying: true,
-        };
+        
+        gameState = { level: 0, currentQuestion: null, isGameOver: false, isPlaying: true };
+        
+        const welcomeMessage = "Selamat datang di <strong>SIAPA MAU JADI DERMAWAN</strong>! Saya, Bang Hafizh, akan memandu permainan ini. Mari kita mulai!";
+        speak("Selamat datang di Siapa Mau Jadi Dermawan! Saya, Bang Hafizh, akan memandu permainan ini. Mari kita mulai!");
+        
         updateHeader();
-        displayMessage("Selamat datang di <strong>SIAPA MAU JADI DERMAWAN</strong>! Saya, Bang Hafizh, akan memandu permainan ini. Mari kita mulai!", 'ai-system');
-        setTimeout(fetchNextQuestion, 1500);
+        updatePrizeLadderUI();
+        fetchNextQuestion();
     }
     
-    // Fungsi untuk mengambil pertanyaan dari backend
     async function fetchNextQuestion() {
         if (gameState.isGameOver) return;
-        statusDiv.textContent = "Bang Hafizh lagi siapin pertanyaan...";
         
+        chatContainer.innerHTML = ''; // Membersihkan pertanyaan sebelumnya
+        statusDiv.textContent = "Bang Hafizh lagi siapin pertanyaan...";
+        sounds.wait.triggerAttackRelease("C4", "8n");
+
         try {
+            // Menggunakan endpoint yang sama dari versi sebelumnya
             const response = await fetch('/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     action: 'GET_QUESTION',
-                    payload: { level: gameState.level }
+                    payload: { level: gameState.level + 1 }
                 }),
             });
             if (!response.ok) throw new Error('Gagal mengambil pertanyaan.');
             
-            const questionData = await response.json();
-            gameState.currentQuestion = questionData;
+            gameState.currentQuestion = await response.json();
             statusDiv.textContent = "";
-            displayQuestion(questionData);
+            displayQuestion(gameState.currentQuestion);
+            speak(`Pertanyaan untuk ${prizeTiers[gameState.level].label}. ${gameState.currentQuestion.question}`);
 
         } catch (error) {
             console.error(error);
@@ -74,7 +123,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Fungsi untuk menampilkan pertanyaan dan pilihan jawaban
     function displayQuestion(data) {
         const messageElement = document.createElement('div');
         messageElement.classList.add('chat-message', 'ai-message');
@@ -102,60 +150,50 @@ document.addEventListener('DOMContentLoaded', () => {
         questionBox.appendChild(choiceContainer);
         messageElement.appendChild(questionBox);
         chatContainer.appendChild(messageElement);
-        chatContainer.scrollTop = chatContainer.scrollHeight;
     }
 
-    // Fungsi untuk menangani jawaban pemain
     async function handleAnswer(selectedButton) {
-        // Menonaktifkan semua tombol pilihan
-        const buttons = document.querySelectorAll('.choice-button');
-        buttons.forEach(btn => btn.disabled = true);
-        
+        document.querySelectorAll('.choice-button').forEach(btn => btn.disabled = true);
         selectedButton.classList.add('selected');
+        
+        statusDiv.textContent = "Hmm, Bang Hafizh lagi ngecek jawabanmu...";
+        sounds.wait.triggerAttackRelease("E4", "8n");
+        await new Promise(resolve => setTimeout(resolve, 2000));
 
         const selectedIndex = parseInt(selectedButton.dataset.index);
         const correctIndex = gameState.currentQuestion.correct_answer_index;
         const isCorrect = selectedIndex === correctIndex;
 
-        // Beri sedikit jeda untuk efek dramatis
-        statusDiv.textContent = "Hmm, Bang Hafizh lagi ngecek jawabanmu...";
-        await new Promise(resolve => setTimeout(resolve, 1500));
-
-        // Tampilkan hasil visual
         const correctButton = document.querySelector(`.choice-button[data-index='${correctIndex}']`);
         correctButton.classList.add('correct');
-        if (!isCorrect) {
-            selectedButton.classList.add('incorrect');
-        } else {
-            // Efek confetti jika jawaban benar!
-            confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
-        }
-
-        // Ambil dan tampilkan komentar host
+        
         const commentary = await getHostCommentary(isCorrect);
         statusDiv.textContent = "";
-        displayMessage(`<strong>Bang Hafizh:</strong> ${commentary}`, 'ai-message');
-
-        // Tampilkan fun fact
-        displayMessage(`<strong>Fun Fact:</strong> ${gameState.currentQuestion.fun_fact}`, 'ai-system');
-
+        displayMessageAsHost(commentary);
+        speak(commentary);
 
         if (isCorrect) {
-            // Update skor dan level
-            gameState.level++;
-            gameState.score += 100;
-            updateHeader();
-            // Lanjut ke pertanyaan berikutnya
-            setTimeout(fetchNextQuestion, 3000);
+            sounds.correct.start();
+            confetti({ particleCount: 150, spread: 90, origin: { y: 0.6 } });
+            
+            if (gameState.level === prizeTiers.length - 1) {
+                // Pemenang 1 Miliar!
+                gameState.isGameOver = true;
+                displayGameOver(true);
+            } else {
+                gameState.level++;
+                updateHeader();
+                updatePrizeLadderUI();
+                setTimeout(fetchNextQuestion, 4000);
+            }
         } else {
-            // Game Over
+            sounds.wrong.start();
+            selectedButton.classList.add('incorrect');
             gameState.isGameOver = true;
-            gameState.isPlaying = false;
-            displayGameOver();
+            setTimeout(() => displayGameOver(false), 2000);
         }
     }
 
-    // Fungsi untuk mengambil komentar host dari backend
     async function getHostCommentary(isCorrect) {
         try {
             const q = gameState.currentQuestion;
@@ -166,7 +204,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     action: 'GET_HOST_COMMENTARY',
                     payload: {
                         question: q.question,
-                        userAnswer: q.options[q.correct_answer_index], // Placeholder, bisa diisi jawaban user
+                        userAnswer: q.options[q.correct_answer_index], // Placeholder
                         correctAnswer: q.options[q.correct_answer_index],
                         isCorrect: isCorrect
                     }
@@ -177,35 +215,62 @@ document.addEventListener('DOMContentLoaded', () => {
             return data.commentary;
         } catch (error) {
             console.error(error);
-            return isCorrect ? "Jawabanmu benar!" : "Jawabanmu salah.";
+            return isCorrect ? "Luar biasa! Jawabanmu benar sekali!" : "Yaaah, sayang sekali jawabanmu kurang tepat.";
         }
     }
-
-    // Fungsi untuk menampilkan pesan di chat
-    function displayMessage(message, sender) {
-        const messageElement = document.createElement('div');
-        messageElement.classList.add('chat-message', `${sender}-message`);
-        messageElement.innerHTML = message;
-        chatContainer.appendChild(messageElement);
-        chatContainer.scrollTop = chatContainer.scrollHeight;
+    
+    function displayMessageAsHost(message) {
+        statusDiv.textContent = `Bang Hafizh: ${message.replace(/<[^>]*>/g, '')}`;
     }
 
-    // Fungsi untuk menampilkan layar Game Over
-    function displayGameOver() {
+    function displayGameOver(isWinner) {
+        chatContainer.innerHTML = '';
+        let finalPrize = 0;
+        // Cari titik aman terakhir yang dicapai
+        for (let i = gameState.level - 1; i >= 0; i--) {
+            if (prizeTiers[i].safe) {
+                finalPrize = prizeTiers[i].value;
+                break;
+            }
+        }
+        // Jika menang di level terakhir
+        if (isWinner) {
+            finalPrize = prizeTiers[prizeTiers.length-1].value;
+        }
+
+        const finalPrizeLabel = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(finalPrize);
+        const title = isWinner ? "SELAMAT, ANDA MENJADI MILIARDER!" : "GAME OVER";
+        const messageText = isWinner ? `Anda berhasil membawa pulang hadiah utama!` : `Anda membawa pulang hadiah sebesar`;
+
         const message = `
             <div class="question-box">
-                <div class="question-text">GAME OVER</div>
-                <div>Skor Akhir Kamu: <strong>${gameState.score}</strong></div>
+                <div class="question-text" style="font-size: 1.5rem;">${title}</div>
+                <div style="text-align:center; font-size: 1.1rem; margin-bottom: 10px;">${messageText}</div>
+                <div style="text-align:center; font-size: 2rem; font-weight: 900; color: var(--correct-answer); margin-bottom: 20px;">${finalPrizeLabel}</div>
                 <div class="choice-container" style="grid-template-columns: 1fr;">
                     <button class="choice-button" id="play-again-btn">MAU MAIN LAGI?</button>
                 </div>
             </div>`;
-        displayMessage(message, 'ai-system');
+        
+        chatContainer.innerHTML = message;
         document.getElementById('play-again-btn').onclick = initializeGame;
+        speak(`${title}. ${messageText} ${finalPrizeLabel}`);
     }
 
-    // Fungsi untuk memperbarui header (level dan skor)
     function updateHeader() {
-        headerSubtitle.innerHTML = `Level ${gameState.level} - Poin: ${gameState.score}`;
+        headerSubtitle.textContent = `Pertanyaan ${gameState.level + 1} dari ${prizeTiers.length}`;
     }
+
+    function updatePrizeLadderUI() {
+        document.querySelectorAll('.prize-tier').forEach(tier => {
+            tier.classList.remove('current');
+            if (parseInt(tier.dataset.level) === gameState.level) {
+                tier.classList.add('current');
+                // Scroll papan skor agar level saat ini terlihat
+                tier.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+            }
+        });
+    }
+
+    init();
 });
