@@ -1,7 +1,7 @@
 /**
  * HAFIZH GAMES - game.js
- * Versi: 2.2
- * Deskripsi: Logika frontend yang disempurnakan dengan tombol mulai yang andal, host yang lebih bersemangat, dan hook pembuka yang dramatis.
+ * Versi: 2.3
+ * Deskripsi: PERBAIKAN KRITIS pada logika state untuk memastikan tombol mulai/main lagi selalu berfungsi.
  */
 document.addEventListener('DOMContentLoaded', () => {
     // Elemen DOM
@@ -31,12 +31,12 @@ document.addEventListener('DOMContentLoaded', () => {
         { value: 1000000000, label: "Rp 1 Miliar", safe: true } // Hadiah Utama
     ];
 
-    // State Game
+    // PERBAIKAN: State awal diatur secara eksplisit untuk menandakan game belum berjalan.
     let gameState = {
         level: 0,
         currentQuestion: null,
-        isGameOver: true, // Mulai dengan status game over
-        isPlaying: false, // Mulai dengan status tidak bermain
+        isGameOver: true,
+        isPlaying: false,
     };
 
     // Inisialisasi Suara dengan Tone.js
@@ -58,7 +58,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    // Fungsi untuk berbicara (Text-to-Speech)
     function speak(text) {
         if (!audioReady || !('speechSynthesis' in window)) return;
         window.speechSynthesis.cancel();
@@ -69,7 +68,6 @@ document.addEventListener('DOMContentLoaded', () => {
         window.speechSynthesis.speak(utterance);
     }
 
-    // Inisialisasi
     function init() {
         populatePrizeList();
         startGameBtn.addEventListener('click', initializeGame);
@@ -88,8 +86,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function initializeGame() {
-        // PERBAIKAN: Guard yang lebih baik, hanya mencegah klik saat game sedang aktif berjalan
-        if (gameState.isPlaying && !gameState.isGameOver) return;
+        // PERBAIKAN: Guard diubah untuk hanya mencegah klik ganda saat game sedang aktif (loading/menunggu jawaban).
+        if (gameState.isPlaying) return;
         
         if (!audioReady) {
             try {
@@ -106,7 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         startOverlay.classList.add('hidden');
         
-        // Reset state untuk permainan baru
+        // PERBAIKAN: State direset dengan benar untuk memulai permainan baru.
         gameState = { level: 0, currentQuestion: null, isGameOver: false, isPlaying: true };
         
         const welcomeText = "DARI STUDIO HAFIZH GAMES! INILAH DIA... <strong>SIAPA MAU JADI DERMAWAN!</strong> Saya, Bang Hafizh, siap memandu Anda merebut 1 Miliar! APA ANDA SUDAH SIAP?! AYO KITA MULAI!!";
@@ -130,10 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch('/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    action: 'GET_QUESTION',
-                    payload: { level: gameState.level + 1 }
-                }),
+                body: JSON.stringify({ action: 'GET_QUESTION', payload: { level: gameState.level + 1 } }),
             });
             if (!response.ok) throw new Error(`Gagal mengambil pertanyaan: ${response.statusText}`);
             
@@ -209,7 +204,8 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             if(audioReady) sounds.wrong.start();
             selectedButton.classList.add('incorrect');
-            displayGameOver(false);
+            // Menunggu sebentar sebelum menampilkan layar game over
+            setTimeout(() => displayGameOver(false), 2000);
         }
     }
 
@@ -241,7 +237,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function displayGameOver(isWinner) {
-        // PERBAIKAN: Set status game berakhir di sini
+        // PERBAIKAN: State diatur secara eksplisit untuk menandakan game telah berakhir.
         gameState.isGameOver = true;
         gameState.isPlaying = false;
 
@@ -254,7 +250,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         if (isWinner) {
-            finalPrize = prizeTiers[prizeTiers.length-1].value;
+            finalPrize = prizeTiers[prizeTiers.length - 1].value;
         }
 
         const finalPrizeLabel = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(finalPrize);
@@ -272,6 +268,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>`;
         
         chatContainer.innerHTML = message;
+        // PERBAIKAN: Memastikan tombol "Main Lagi" yang baru dibuat mendapatkan event listener.
         document.getElementById('play-again-btn').onclick = initializeGame;
         speak(`${title}. ${messageText} ${finalPrizeLabel}`);
     }
