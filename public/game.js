@@ -1,7 +1,7 @@
 /**
  * HAFIZH GAMES - game.js
- * Versi: 2.0
- * Deskripsi: Logika frontend yang disempurnakan dengan papan skor, suara, dan mekanisme baru.
+ * Versi: 2.1
+ * Deskripsi: Logika frontend yang disempurnakan dengan tombol mulai yang andal dan host yang lebih bersemangat.
  */
 document.addEventListener('DOMContentLoaded', () => {
     // Elemen DOM
@@ -33,28 +33,40 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // State Game
     let gameState = {
-        level: 0, // Dimulai dari 0 (indeks array)
+        level: 0,
         currentQuestion: null,
         isGameOver: false,
         isPlaying: false,
     };
 
     // Inisialisasi Suara dengan Tone.js
-    // URL placeholder, ganti dengan URL file suara Anda
-    const sounds = {
-        start: new Tone.Player("https://firebasestorage.googleapis.com/v0/b/rasa-426813.appspot.com/o/start.mp3?alt=media&token=35a2d5c4-5e84-473d-862d-864023c7c4b6").toDestination(),
-        correct: new Tone.Player("https://firebasestorage.googleapis.com/v0/b/rasa-426813.appspot.com/o/correct.mp3?alt=media&token=404f2a11-5e20-411a-b054-325b51a84f50").toDestination(),
-        wrong: new Tone.Player("https://firebasestorage.googleapis.com/v0/b/rasa-426813.appspot.com/o/wrong.mp3?alt=media&token=3852899a-3286-4448-a0b4-7b44383a54d4").toDestination(),
-        wait: new Tone.Synth({ oscillator: { type: "sine" }, envelope: { attack: 0.005, decay: 0.1, sustain: 0.3, release: 1 } }).toDestination()
-    };
+    let sounds;
+    let audioReady = false;
+
+    function setupAudio() {
+        if (audioReady) return;
+        try {
+            sounds = {
+                start: new Tone.Player("https://firebasestorage.googleapis.com/v0/b/rasa-426813.appspot.com/o/start.mp3?alt=media&token=35a2d5c4-5e84-473d-862d-864023c7c4b6").toDestination(),
+                correct: new Tone.Player("https://firebasestorage.googleapis.com/v0/b/rasa-426813.appspot.com/o/correct.mp3?alt=media&token=404f2a11-5e20-411a-b054-325b51a84f50").toDestination(),
+                wrong: new Tone.Player("https://firebasestorage.googleapis.com/v0/b/rasa-426813.appspot.com/o/wrong.mp3?alt=media&token=3852899a-3286-4448-a0b4-7b44383a54d4").toDestination(),
+                wait: new Tone.Synth({ oscillator: { type: "sine" }, envelope: { attack: 0.005, decay: 0.1, sustain: 0.3, release: 1 } }).toDestination()
+            };
+            audioReady = true;
+        } catch (e) {
+            console.error("Gagal memuat Tone.js:", e);
+        }
+    }
     
     // Fungsi untuk berbicara (Text-to-Speech)
-    function speak(text) {
+    function speak(text, force) {
+        if (!audioReady) return;
         if (!('speechSynthesis' in window)) return;
         window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(text.replace(/<[^>]*>/g, '')); // Hapus tag HTML
+        const utterance = new SpeechSynthesisUtterance(text.replace(/<[^>]*>/g, ''));
         utterance.lang = 'id-ID';
-        utterance.rate = 1.1;
+        utterance.rate = 1.2; // Sedikit lebih cepat untuk semangat
+        utterance.pitch = 1.1; // Nada lebih tinggi
         window.speechSynthesis.speak(utterance);
     }
 
@@ -70,23 +82,32 @@ document.addEventListener('DOMContentLoaded', () => {
             const li = document.createElement('li');
             li.className = 'prize-tier';
             li.dataset.level = index;
-            li.textContent = `${index + 1}. ${tier.label}`;
-            if (tier.safe) {
-                li.classList.add('safe-haven');
-            }
+            li.innerHTML = `<span>${index + 1}</span> <span>${tier.label}</span>`;
+            if (tier.safe) li.classList.add('safe-haven');
             prizeList.appendChild(li);
         });
     }
 
     async function initializeGame() {
-        await Tone.start(); // Membutuhkan interaksi pengguna untuk memulai audio
-        sounds.start.start();
+        // PERBAIKAN: Memastikan audio context dimulai oleh interaksi pengguna
+        if (!audioReady) {
+            await Tone.start();
+            setupAudio();
+        }
+        
+        if (!audioReady) {
+            alert("Gagal memuat komponen audio. Permainan akan berjalan tanpa suara.");
+        } else {
+            sounds.start.start();
+        }
+
         startOverlay.classList.add('hidden');
         
         gameState = { level: 0, currentQuestion: null, isGameOver: false, isPlaying: true };
         
-        const welcomeMessage = "Selamat datang di <strong>SIAPA MAU JADI DERMAWAN</strong>! Saya, Bang Hafizh, akan memandu permainan ini. Mari kita mulai!";
-        speak("Selamat datang di Siapa Mau Jadi Dermawan! Saya, Bang Hafizh, akan memandu permainan ini. Mari kita mulai!");
+        // HOOK PEMBUKA BARU
+        const welcomeMessage = "BERSIAP-SIAP! Inilah dia... <strong>SIAPA MAU JADI DERMAWAN!</strong> Saya, Bang Hafizh, akan memandu Anda menuju 1 Miliar! AYO KITA MULAI!!";
+        speak("Bersiap-siap! Inilah dia... SIAPA MAU JADI DERMAWAN! Saya, Bang Hafizh, akan memandu Anda menuju 1 Miliar! AYO KITA MULAI!!");
         
         updateHeader();
         updatePrizeLadderUI();
@@ -96,12 +117,11 @@ document.addEventListener('DOMContentLoaded', () => {
     async function fetchNextQuestion() {
         if (gameState.isGameOver) return;
         
-        chatContainer.innerHTML = ''; // Membersihkan pertanyaan sebelumnya
+        chatContainer.innerHTML = '';
         statusDiv.textContent = "Bang Hafizh lagi siapin pertanyaan...";
-        sounds.wait.triggerAttackRelease("C4", "8n");
+        if(audioReady) sounds.wait.triggerAttackRelease("C4", "8n");
 
         try {
-            // Menggunakan endpoint yang sama dari versi sebelumnya
             const response = await fetch('/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -110,7 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     payload: { level: gameState.level + 1 }
                 }),
             });
-            if (!response.ok) throw new Error('Gagal mengambil pertanyaan.');
+            if (!response.ok) throw new Error(`Gagal mengambil pertanyaan: ${response.statusText}`);
             
             gameState.currentQuestion = await response.json();
             statusDiv.textContent = "";
@@ -126,14 +146,11 @@ document.addEventListener('DOMContentLoaded', () => {
     function displayQuestion(data) {
         const messageElement = document.createElement('div');
         messageElement.classList.add('chat-message', 'ai-message');
-
         const questionBox = document.createElement('div');
         questionBox.className = 'question-box';
-        
         const questionText = document.createElement('div');
         questionText.className = 'question-text';
         questionText.innerHTML = data.question;
-        
         const choiceContainer = document.createElement('div');
         choiceContainer.className = 'choice-container';
 
@@ -157,7 +174,7 @@ document.addEventListener('DOMContentLoaded', () => {
         selectedButton.classList.add('selected');
         
         statusDiv.textContent = "Hmm, Bang Hafizh lagi ngecek jawabanmu...";
-        sounds.wait.triggerAttackRelease("E4", "8n");
+        if(audioReady) sounds.wait.triggerAttackRelease("E4", "8n");
         await new Promise(resolve => setTimeout(resolve, 2000));
 
         const selectedIndex = parseInt(selectedButton.dataset.index);
@@ -173,11 +190,10 @@ document.addEventListener('DOMContentLoaded', () => {
         speak(commentary);
 
         if (isCorrect) {
-            sounds.correct.start();
+            if(audioReady) sounds.correct.start();
             confetti({ particleCount: 150, spread: 90, origin: { y: 0.6 } });
             
             if (gameState.level === prizeTiers.length - 1) {
-                // Pemenang 1 Miliar!
                 gameState.isGameOver = true;
                 displayGameOver(true);
             } else {
@@ -187,7 +203,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 setTimeout(fetchNextQuestion, 4000);
             }
         } else {
-            sounds.wrong.start();
+            if(audioReady) sounds.wrong.start();
             selectedButton.classList.add('incorrect');
             gameState.isGameOver = true;
             setTimeout(() => displayGameOver(false), 2000);
@@ -203,10 +219,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify({
                     action: 'GET_HOST_COMMENTARY',
                     payload: {
-                        question: q.question,
-                        userAnswer: q.options[q.correct_answer_index], // Placeholder
-                        correctAnswer: q.options[q.correct_answer_index],
-                        isCorrect: isCorrect
+                        question: q.question, userAnswer: q.options[q.correct_answer_index], 
+                        correctAnswer: q.options[q.correct_answer_index], isCorrect: isCorrect
                     }
                 }),
             });
@@ -215,7 +229,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return data.commentary;
         } catch (error) {
             console.error(error);
-            return isCorrect ? "Luar biasa! Jawabanmu benar sekali!" : "Yaaah, sayang sekali jawabanmu kurang tepat.";
+            // KARAKTER HOST LEBIH SEMANGAT
+            return isCorrect ? "LUAR BIASA!! TEPAT SEKALI! LANJUTKAN KE LEVEL BERIKUTNYA, JUARA!" : "YAAAHHH, SAYANG SEKALI! Bukan itu jawabannya. TAPI JANGAN MENYERAH!";
         }
     }
     
@@ -226,14 +241,12 @@ document.addEventListener('DOMContentLoaded', () => {
     function displayGameOver(isWinner) {
         chatContainer.innerHTML = '';
         let finalPrize = 0;
-        // Cari titik aman terakhir yang dicapai
         for (let i = gameState.level - 1; i >= 0; i--) {
             if (prizeTiers[i].safe) {
                 finalPrize = prizeTiers[i].value;
                 break;
             }
         }
-        // Jika menang di level terakhir
         if (isWinner) {
             finalPrize = prizeTiers[prizeTiers.length-1].value;
         }
@@ -266,7 +279,6 @@ document.addEventListener('DOMContentLoaded', () => {
             tier.classList.remove('current');
             if (parseInt(tier.dataset.level) === gameState.level) {
                 tier.classList.add('current');
-                // Scroll papan skor agar level saat ini terlihat
                 tier.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
             }
         });
