@@ -3,8 +3,8 @@ const CACHE_NAME = 'rasa-cache-v3';
 const urlsToCache = [
   '/',
   '/index.html',
-  '/style.css',      // BARU: Menambahkan file CSS ke cache
-  '/script.js',      // BARU: Menambahkan file JavaScript ke cache
+  '/style.css',
+  '/game.js', // PERBAIKAN: Mengubah '/script.js' menjadi '/game.js' agar sesuai dengan file HTML.
   '/manifest.json',
   '/icons/icon-192x192.png',
   '/icons/icon-512x512.png'
@@ -25,6 +25,7 @@ self.addEventListener('install', event => {
 self.addEventListener('fetch', event => {
   // Jangan cache permintaan API, selalu ambil dari jaringan
   if (event.request.url.includes('/api/')) {
+    // Biarkan permintaan API langsung ke jaringan
     return;
   }
 
@@ -48,6 +49,7 @@ self.addEventListener('activate', event => {
         cacheNames.map(cacheName => {
           // Jika cache lama tidak ada di dalam whitelist, maka hapus
           if (cacheWhitelist.indexOf(cacheName) === -1) {
+            console.log('Menghapus cache lama:', cacheName);
             return caches.delete(cacheName);
           }
         })
