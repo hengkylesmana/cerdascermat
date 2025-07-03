@@ -1,6 +1,6 @@
 /**
  * HAFIZH GAMES - chat.js (Netlify Function)
- * Versi: 2.1
+ * Versi: 2.2
  * Deskripsi: Backend AI dengan karakter host yang lebih bersemangat.
  */
 const fetch = require('node-fetch');
