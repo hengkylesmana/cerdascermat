@@ -35,8 +35,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let gameState = {
         level: 0,
         currentQuestion: null,
-        isGameOver: false,
-        isPlaying: false,
+        isGameOver: true, // Mulai dengan status game over
+        isPlaying: false, // Mulai dengan status tidak bermain
     };
 
     // Inisialisasi Suara dengan Tone.js
@@ -64,8 +64,8 @@ document.addEventListener('DOMContentLoaded', () => {
         window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(text.replace(/<[^>]*>/g, ''));
         utterance.lang = 'id-ID';
-        utterance.rate = 1.2; // Sedikit lebih cepat untuk semangat
-        utterance.pitch = 1.1; // Nada lebih tinggi
+        utterance.rate = 1.2;
+        utterance.pitch = 1.1;
         window.speechSynthesis.speak(utterance);
     }
 
@@ -88,31 +88,27 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function initializeGame() {
-        // Guard untuk mencegah klik ganda
-        if (gameState.isPlaying) return;
+        // PERBAIKAN: Guard yang lebih baik, hanya mencegah klik saat game sedang aktif berjalan
+        if (gameState.isPlaying && !gameState.isGameOver) return;
         
-        // PERBAIKAN: Logika inisialisasi audio yang lebih andal
         if (!audioReady) {
             try {
                 await Tone.start();
                 setupAudio();
             } catch (e) {
                 console.error("Audio context gagal dimulai:", e);
-                // Game tetap bisa berjalan tanpa audio
             }
         }
         
-        if (!audioReady) {
-            statusDiv.textContent = "Gagal memuat audio, game berjalan tanpa suara.";
-        } else {
+        if (audioReady) {
             sounds.start.start();
         }
 
         startOverlay.classList.add('hidden');
         
+        // Reset state untuk permainan baru
         gameState = { level: 0, currentQuestion: null, isGameOver: false, isPlaying: true };
         
-        // HOOK PEMBUKA BARU YANG LEBIH SEMANGAT
         const welcomeText = "DARI STUDIO HAFIZH GAMES! INILAH DIA... <strong>SIAPA MAU JADI DERMAWAN!</strong> Saya, Bang Hafizh, siap memandu Anda merebut 1 Miliar! APA ANDA SUDAH SIAP?! AYO KITA MULAI!!";
         displayMessageAsHost(welcomeText);
         speak("Dari studio Hafizh Games! Inilah dia... SIAPA MAU JADI DERMAWAN! Saya, Bang Hafizh, siap memandu Anda merebut 1 Miliar! Apa anda sudah siap?! Ayo kita mulai!!");
@@ -120,7 +116,6 @@ document.addEventListener('DOMContentLoaded', () => {
         updateHeader();
         updatePrizeLadderUI();
         
-        // Beri jeda agar musik dan sapaan terdengar sebelum pertanyaan pertama
         setTimeout(fetchNextQuestion, 4000);
     }
     
@@ -204,7 +199,6 @@ document.addEventListener('DOMContentLoaded', () => {
             confetti({ particleCount: 150, spread: 90, origin: { y: 0.6 } });
             
             if (gameState.level === prizeTiers.length - 1) {
-                gameState.isGameOver = true;
                 displayGameOver(true);
             } else {
                 gameState.level++;
@@ -215,8 +209,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             if(audioReady) sounds.wrong.start();
             selectedButton.classList.add('incorrect');
-            gameState.isGameOver = true;
-            setTimeout(() => displayGameOver(false), 2000);
+            displayGameOver(false);
         }
     }
 
@@ -239,17 +232,19 @@ document.addEventListener('DOMContentLoaded', () => {
             return data.commentary;
         } catch (error) {
             console.error(error);
-            // KARAKTER HOST LEBIH SEMANGAT
             return isCorrect ? "DAHSYAT! BENAR SEKALI! LANJUTKAN KE LEVEL BERIKUTNYA, JUARA!" : "WADUH, BELUM TEPAT! TAPI SEMANGAT JANGAN KENDOR, AYO BISA!";
         }
     }
     
     function displayMessageAsHost(message) {
-        // Fungsi ini sekarang menampilkan pesan di area utama, bukan di status bar
         chatContainer.innerHTML = `<div class="ai-system-message">${message}</div>`;
     }
 
     function displayGameOver(isWinner) {
+        // PERBAIKAN: Set status game berakhir di sini
+        gameState.isGameOver = true;
+        gameState.isPlaying = false;
+
         chatContainer.innerHTML = '';
         let finalPrize = 0;
         for (let i = gameState.level - 1; i >= 0; i--) {
