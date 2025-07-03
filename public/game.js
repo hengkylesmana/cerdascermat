@@ -1,8 +1,8 @@
 /**
  * HAFIZH GAMES - game.js
- * Versi: 7.0
- * Deskripsi: PERBAIKAN FINAL - Menghilangkan musik dan pesan pembuka.
- * Game langsung memuat pertanyaan pertama setelah tombol "Mulai" ditekan untuk keandalan maksimum.
+ * Versi: 8.0
+ * Deskripsi: PERBAIKAN KETAHANAN FINAL - Menambahkan timeout pada getHostCommentary dan menyederhanakan
+ * alur async di handleAnswer untuk mencegah game macet setelah pertanyaan pertama.
  */
 document.addEventListener('DOMContentLoaded', () => {
     // Elemen DOM
@@ -14,6 +14,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const startScreen = document.getElementById('start-screen');
     const startGameBtn = document.getElementById('start-game-btn');
     const gameLayout = document.getElementById('game-layout');
+
+    // Helper function untuk jeda
+    const delay = ms => new Promise(res => setTimeout(res, ms));
 
     // Konfigurasi Hadiah
     const prizeTiers = [
@@ -41,7 +44,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (audioReady) return;
         try {
             sounds = {
-                // Musik start tidak lagi digunakan di awal
                 correct: new Tone.Player("https://firebasestorage.googleapis.com/v0/b/rasa-426813.appspot.com/o/correct.mp3?alt=media&token=404f2a11-5e20-411a-b054-325b51a84f50").toDestination(),
                 wrong: new Tone.Player("https://firebasestorage.googleapis.com/v0/b/rasa-426813.appspot.com/o/wrong.mp3?alt=media&token=3852899a-3286-4448-a0b4-7b44383a54d4").toDestination(),
                 wait: new Tone.Synth({ oscillator: { type: "sine" }, envelope: { attack: 0.005, decay: 0.1, sustain: 0.3, release: 1 } }).toDestination()
@@ -79,28 +81,21 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // PERUBAHAN: Alur disederhanakan
     async function initializeGame() {
         startGameBtn.disabled = true;
         startGameBtn.textContent = "Memuat...";
-        
-        // Tetap mencoba mengaktifkan audio untuk efek suara nanti
         try {
             await Tone.start();
             setupAudio();
         } catch (e) {
             console.error("Gagal memulai konteks audio:", e);
         }
-
-        // Sembunyikan layar pembuka dan tampilkan game
         startScreen.style.display = 'none';
         gameLayout.style.display = 'flex';
-        
-        // Reset state dan langsung panggil pertanyaan pertama
         gameState = { level: 0, currentQuestion: null, isGameOver: false, isPlaying: true };
         updateHeader();
         updatePrizeLadderUI();
-        fetchNextQuestion(); // Langsung ke pertanyaan
+        fetchNextQuestion();
     }
     
     function displayError(message) {
@@ -120,7 +115,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function fetchNextQuestion() {
         if (gameState.isGameOver) return;
-        
         chatContainer.innerHTML = '';
         statusDiv.textContent = "Bang Hafizh lagi siapin pertanyaan...";
         if (audioReady) sounds.wait.triggerAttackRelease("C4", "8n");
@@ -135,12 +129,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify({ action: 'GET_QUESTION', payload: { level: gameState.level + 1 } }),
                 signal: controller.signal
             });
-
             clearTimeout(timeoutId);
-
-            if (!response.ok) {
-                throw new Error(`Server merespons dengan status ${response.status}`);
-            }
+            if (!response.ok) throw new Error(`Server merespons dengan status ${response.status}`);
             
             gameState.currentQuestion = await response.json();
             statusDiv.textContent = "";
@@ -149,15 +139,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const prizeText = prizeTiers[gameState.level].label;
             const questionText = gameState.currentQuestion.question;
             speak(`Pertanyaan untuk ${prizeText}. ${questionText}`);
-
         } catch (error) {
             clearTimeout(timeoutId);
             console.error("Fetch Gagal:", error);
-            if (error.name === 'AbortError') {
-                displayError("Bang Hafizh tidak merespons. Mungkin dia sedang sibuk. Silakan coba lagi.");
-            } else {
-                displayError("Gagal menghubungi Bang Hafizh. Periksa koneksi internet Anda dan coba lagi.");
-            }
+            const errorMessage = error.name === 'AbortError' ? "Bang Hafizh tidak merespons. Mungkin dia sedang sibuk." : "Gagal menghubungi Bang Hafizh. Periksa koneksi internet Anda.";
+            displayError(errorMessage + " Silakan coba lagi.");
         }
     }
 
@@ -171,7 +157,6 @@ document.addEventListener('DOMContentLoaded', () => {
         questionText.innerHTML = data.question;
         const choiceContainer = document.createElement('div');
         choiceContainer.className = 'choice-container';
-
         data.options.forEach((option, index) => {
             const button = document.createElement('button');
             button.className = 'choice-button';
@@ -180,20 +165,20 @@ document.addEventListener('DOMContentLoaded', () => {
             button.onclick = () => handleAnswer(button);
             choiceContainer.appendChild(button);
         });
-
         questionBox.appendChild(questionText);
         questionBox.appendChild(choiceContainer);
         messageElement.appendChild(questionBox);
         chatContainer.appendChild(messageElement);
     }
 
+    // PERBAIKAN: Alur dibuat lebih linear dan tangguh
     async function handleAnswer(selectedButton) {
         document.querySelectorAll('.choice-button').forEach(btn => btn.disabled = true);
         selectedButton.classList.add('selected');
         
         statusDiv.textContent = "Hmm, Bang Hafizh lagi ngecek jawabanmu...";
         if (audioReady) sounds.wait.triggerAttackRelease("E4", "8n");
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await delay(2000);
 
         const selectedIndex = parseInt(selectedButton.dataset.index);
         const correctIndex = gameState.currentQuestion.correct_answer_index;
@@ -202,34 +187,38 @@ document.addEventListener('DOMContentLoaded', () => {
         const correctButton = document.querySelector(`.choice-button[data-index='${correctIndex}']`);
         correctButton.classList.add('correct');
         
-        const commentary = await getHostCommentary(isCorrect);
+        const commentary = await getHostCommentary(isCorrect); // Sekarang dengan timeout
         statusDiv.textContent = "";
         displayMessageAsHost(commentary);
-        
         speak(commentary);
         
-        setTimeout(() => {
-            if (isCorrect) {
-                if (audioReady) sounds.correct.start();
-                confetti({ particleCount: 150, spread: 90, origin: { y: 0.6 } });
-                
-                if (gameState.level === prizeTiers.length - 1) {
-                    displayGameOver(true);
-                } else {
-                    gameState.level++;
-                    updateHeader();
-                    updatePrizeLadderUI();
-                    setTimeout(fetchNextQuestion, 1500);
-                }
+        await delay(1500); // Jeda setelah komentar muncul
+
+        if (isCorrect) {
+            if (audioReady) sounds.correct.start();
+            confetti({ particleCount: 150, spread: 90, origin: { y: 0.6 } });
+            await delay(1500); // Jeda untuk menikmati konfeti
+
+            if (gameState.level === prizeTiers.length - 1) {
+                displayGameOver(true);
             } else {
-                if (audioReady) sounds.wrong.start();
-                selectedButton.classList.add('incorrect');
-                displayGameOver(false);
+                gameState.level++;
+                updateHeader();
+                updatePrizeLadderUI();
+                fetchNextQuestion();
             }
-        }, 2000);
+        } else {
+            if (audioReady) sounds.wrong.start();
+            selectedButton.classList.add('incorrect');
+            displayGameOver(false);
+        }
     }
 
+    // PERBAIKAN: Menambahkan timeout pada getHostCommentary
     async function getHostCommentary(isCorrect) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // Timeout 10 detik
+
         try {
             const q = gameState.currentQuestion;
             const response = await fetch('/api/chat', {
@@ -242,12 +231,16 @@ document.addEventListener('DOMContentLoaded', () => {
                         correctAnswer: q.options[q.correct_answer_index], isCorrect: isCorrect
                     }
                 }),
+                signal: controller.signal
             });
+            clearTimeout(timeoutId);
             if (!response.ok) throw new Error('Gagal mengambil komentar.');
             const data = await response.json();
             return data.commentary;
         } catch (error) {
-            console.error(error);
+            clearTimeout(timeoutId);
+            console.error("Gagal mendapatkan komentar host:", error);
+            // Memberikan komentar default jika gagal
             return isCorrect ? "DAHSYAT! BENAR SEKALI! LANJUTKAN!" : "WADUH, BELUM TEPAT!";
         }
     }
