@@ -1,7 +1,7 @@
 /*
   HAFIZH GAMES - style.css
-  Versi: 2.1
-  Deskripsi: Desain ulang dengan tema terang, papan skor vertikal, dan peningkatan responsivitas.
+  Versi: 2.2
+  Deskripsi: Desain ulang dengan papan skor vertikal yang lebih baik dan responsif.
 */
 
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap');
@@ -33,7 +33,7 @@ body {
     color: var(--text-dark);
     padding: 10px;
     box-sizing: border-box;
-    overflow-x: hidden;
+    overflow: hidden;
 }
 
 #game-layout {
@@ -70,6 +70,7 @@ header {
     border-bottom: 1px solid var(--border-color);
     text-align: center;
     background-color: #fff;
+    flex-shrink: 0;
 }
 
 .title-group h1 {
@@ -89,6 +90,7 @@ header {
     flex-grow: 1;
     padding: 20px;
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
 }
@@ -101,11 +103,11 @@ header {
 @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
 
 .ai-system-message {
-    font-style: italic;
-    font-weight: 600;
+    font-size: 1.2rem;
+    font-weight: 700;
     color: var(--primary-color);
     text-align: center;
-    margin-bottom: 20px;
+    padding: 20px;
 }
 
 .question-box {
@@ -179,6 +181,7 @@ header {
     text-align: center;
     min-height: 1.5rem;
     font-weight: 600;
+    flex-shrink: 0;
 }
 
 /* Papan Skor */
@@ -202,6 +205,7 @@ header {
     margin-bottom: 15px;
     padding-bottom: 10px;
     border-bottom: 2px solid var(--border-color);
+    flex-shrink: 0;
 }
 .prize-list {
     list-style: none;
@@ -209,8 +213,8 @@ header {
     margin: 0;
     display: flex;
     flex-direction: column-reverse; /* Hadiah tertinggi di atas */
-    flex-grow: 1;
     overflow-y: auto;
+    scrollbar-width: thin;
 }
 .prize-tier {
     padding: 10px 15px;
@@ -218,9 +222,11 @@ header {
     border-radius: 8px;
     font-weight: 700;
     transition: all 0.3s ease;
-    text-align: right;
     border: 2px solid transparent;
     font-size: 0.9rem;
+    display: flex;
+    justify-content: space-between;
+    flex-shrink: 0;
 }
 .prize-tier.current {
     background-color: var(--secondary-color);
@@ -269,42 +275,35 @@ header {
 
 /* Responsivitas */
 @media (max-width: 992px) {
+    body {
+        padding: 0;
+        overflow: auto; /* Allow body to scroll on small screens */
+    }
     #game-layout {
         flex-direction: column;
         height: auto;
-        padding: 0;
+        min-height: 100vh;
         gap: 0;
     }
-    body {
-        padding: 0;
-    }
     .container {
-        order: 2; /* Game di bawah papan skor */
-        height: auto;
+        order: 2;
         border-radius: 0;
-        border-bottom: none;
-        border-top: none;
+        border-left: none;
+        border-right: none;
     }
     .scoreboard-container {
-        order: 1; /* Papan skor di atas */
+        order: 1;
         width: 100%;
         box-sizing: border-box;
-        height: auto;
+        height: auto; /* Allow height to be determined by content */
+        max-height: 40vh; /* Limit height to 40% of viewport */
         border-radius: 0;
-        border-bottom: 1px solid var(--border-color);
+        border-top: none;
     }
-    /* Mengubah papan skor menjadi horizontal scroll di mobile */
     .prize-list {
-        flex-direction: row;
-        overflow-x: auto;
-        padding-bottom: 10px;
-        scrollbar-width: thin;
-    }
-    .prize-tier {
-        flex: 0 0 130px; /* Lebar setiap item hadiah */
-        margin-right: 10px;
-        text-align: center;
-        font-size: 0.8rem;
+        /* Papan skor tetap vertikal dan bisa di-scroll */
+        flex-direction: column-reverse;
+        overflow-y: auto;
     }
 }
 
@@ -313,6 +312,7 @@ header {
         grid-template-columns: 1fr;
     }
     .prize-tier {
-         flex: 0 0 110px;
+        font-size: 0.85rem;
+        padding: 8px 12px;
     }
 }
