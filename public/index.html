@@ -3,26 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Judul dan branding baru -->
-    <title>HAFIZH GAMES - Bermain Menjadi Hebat</title>
+    <title>HAFIZH GAMES - Siapa Mau Jadi Dermawan</title>
     
-    <!-- PWA & Theme Color disesuaikan dengan palet baru -->
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#FF4136">
+    <meta name="theme-color" content="#007BFF">
     
-    <!-- Font baru dari Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet">
     
-    <!-- Memanggil file CSS yang sudah didesain ulang -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- Latar belakang interaktif dipertahankan dengan gaya baru -->
     <div id="interactive-bg"></div>
 
-    <!-- Modal Awal yang Disederhanakan untuk Game -->
+    <!-- Modal Awal -->
     <div id="start-overlay" class="modal-overlay visible">
         <div class="start-content">
             <div class="start-title-container">
@@ -31,38 +26,44 @@
             </div>
             <div class="info-box">
                 <p>Selamat datang di <strong>SIAPA MAU JADI DERMAWAN!</strong></p>
-                <p>Jawab pertanyaan, raih poin tertinggi, dan buktikan kehebatanmu. Siap?</p>
+                <p>Jawab 15 pertanyaan untuk memenangkan <strong>Rp 1 Miliar!</strong></p>
             </div>
-            <div class="start-button-group">
-                <!-- Tombol utama untuk memulai game -->
-                <button id="start-game-btn" class="modal-button">MULAI PERMAINAN!</button>
-            </div>
+            <button id="start-game-btn" class="modal-button">SAYA SIAP!</button>
         </div>
     </div>
 
-    <!-- Kontainer Utama Aplikasi Game -->
-    <div class="container">
-        <header>
-            <div class="header-content">
+    <!-- Tata Letak Utama Game -->
+    <div id="game-layout">
+        <!-- Kolom Game Utama -->
+        <div class="container">
+            <header>
                 <div class="title-group">
                     <h1 id="header-title">SIAPA MAU JADI DERMAWAN</h1>
-                    <p id="header-subtitle">Level 1 - Poin: 0</p>
+                    <p id="header-subtitle">Pertanyaan 1</p>
                 </div>
+            </header>
+
+            <div class="chat-container" id="chat-container">
+                <!-- Pertanyaan akan dimuat di sini oleh JavaScript -->
             </div>
-        </header>
+            
+            <div id="status" class="status-info"></div>
+        </div>
 
-        <!-- Area untuk menampilkan pesan host dan pertanyaan -->
-        <div class="chat-container" id="chat-container"></div>
-        
-        <!-- Status game (misal: "Memuat pertanyaan...") -->
-        <div id="status" class="status-info"></div>
+        <!-- Kolom Papan Skor Hadiah -->
+        <div class="scoreboard-container">
+            <h2 class="scoreboard-title">PAPAN HADIAH</h2>
+            <ul class="prize-list" id="prize-list">
+                <!-- Daftar hadiah akan diisi oleh JavaScript -->
+            </ul>
+        </div>
     </div>
-
-    <!-- Memanggil file JavaScript utama yang akan berisi logika game -->
-    <!-- PENTING: Nama file diubah dari script.js menjadi game.js untuk kejelasan -->
-    <script src="game.js"></script>
     
-    <!-- Memanggil pustaka untuk efek confetti saat jawaban benar -->
+    <!-- Pustaka Confetti & Tone.js untuk Suara -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+    
+    <!-- File Logika Game -->
+    <script src="game.js"></script>
 </body>
 </html>
