@@ -1,8 +1,8 @@
 /**
  * HAFIZH GAMES - game.js
- * Versi: 3.0
- * Deskripsi: Perubahan besar untuk menghilangkan layar pembuka dan memulai game secara otomatis.
- * Audio diinisialisasi pada interaksi pengguna pertama (klik jawaban) untuk keandalan maksimum.
+ * Versi: 4.0
+ * Deskripsi: Penyempurnaan alur permainan dengan tombol mulai, musik pembuka,
+ * dan pembacaan soal oleh host untuk pengalaman yang lebih imersif.
  */
 document.addEventListener('DOMContentLoaded', () => {
     // Elemen DOM
@@ -10,8 +10,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const statusDiv = document.getElementById('status');
     const headerSubtitle = document.getElementById('header-subtitle');
     const prizeList = document.getElementById('prize-list');
+    
+    // PENYEMPURNAAN: Elemen untuk layar pembuka
+    const startScreen = document.getElementById('start-screen');
+    const startGameBtn = document.getElementById('start-game-btn');
+    const gameLayout = document.getElementById('game-layout');
 
-    // Konfigurasi Hadiah (tidak berubah)
+    // Konfigurasi Hadiah
     const prizeTiers = [
         { value: 100000, label: "Rp 100.000" }, { value: 200000, label: "Rp 200.000" },
         { value: 300000, label: "Rp 300.000" }, { value: 500000, label: "Rp 500.000" },
@@ -35,11 +40,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let sounds;
     let audioReady = false;
 
-    // PERUBAHAN: Fungsi untuk menginisialisasi audio, akan dipanggil nanti
-    async function initializeAudio() {
+    // Fungsi untuk memuat semua file suara
+    function setupAudio() {
         if (audioReady) return;
         try {
-            await Tone.start();
             sounds = {
                 start: new Tone.Player("https://firebasestorage.googleapis.com/v0/b/rasa-426813.appspot.com/o/start.mp3?alt=media&token=35a2d5c4-5e84-473d-862d-864023c7c4b6").toDestination(),
                 correct: new Tone.Player("https://firebasestorage.googleapis.com/v0/b/rasa-426813.appspot.com/o/correct.mp3?alt=media&token=404f2a11-5e20-411a-b054-325b51a84f50").toDestination(),
@@ -47,29 +51,33 @@ document.addEventListener('DOMContentLoaded', () => {
                 wait: new Tone.Synth({ oscillator: { type: "sine" }, envelope: { attack: 0.005, decay: 0.1, sustain: 0.3, release: 1 } }).toDestination()
             };
             audioReady = true;
-            console.log("Konteks audio berhasil dimulai!");
+            console.log("Semua file audio berhasil dimuat.");
         } catch (e) {
-            console.error("Gagal memulai konteks audio:", e);
+            console.error("Gagal memuat file audio:", e);
         }
     }
     
-    function speak(text) {
-        if (!('speechSynthesis' in window)) return;
-        // Jangan bicara jika audio belum siap, kecuali pesan selamat datang
-        if (!audioReady && !text.includes("DERMAWAN")) return;
-        
+    // Fungsi Text-to-Speech
+    function speak(text, callback) {
+        if (!('speechSynthesis' in window)) {
+            if (callback) callback();
+            return;
+        }
         window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(text.replace(/<[^>]*>/g, ''));
         utterance.lang = 'id-ID';
-        utterance.rate = 1.2;
-        utterance.pitch = 1.1;
+        utterance.rate = 1.1;
+        utterance.pitch = 1.0;
+        // Panggil callback setelah selesai bicara
+        utterance.onend = callback;
         window.speechSynthesis.speak(utterance);
     }
 
-    // PERUBAHAN: Fungsi init sekarang langsung memulai permainan
+    // Fungsi inisialisasi utama
     function init() {
         populatePrizeList();
-        startGame();
+        // Menambahkan event listener ke tombol "Mulai Permainan"
+        startGameBtn.addEventListener('click', initializeGame);
     }
 
     function populatePrizeList() {
@@ -84,20 +92,49 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // PERUBAHAN: Fungsi baru untuk memulai game secara otomatis
+    // Fungsi yang dipanggil saat tombol "Mulai" diklik
+    async function initializeGame() {
+        // Nonaktifkan tombol untuk mencegah klik ganda
+        startGameBtn.disabled = true;
+        startGameBtn.textContent = "Memuat...";
+
+        // 1. Inisialisasi konteks audio (wajib karena interaksi pengguna)
+        try {
+            await Tone.start();
+            console.log("Konteks audio berhasil dimulai!");
+            setupAudio(); // Muat semua suara setelah konteks siap
+        } catch (e) {
+            console.error("Gagal memulai konteks audio:", e);
+        }
+
+        // 2. Sembunyikan layar pembuka dan tampilkan game
+        startScreen.style.display = 'none';
+        gameLayout.style.display = 'flex';
+
+        // 3. Mulai alur permainan
+        startGame();
+    }
+
     function startGame() {
-        if (gameState.isPlaying) return;
+        if (gameState.isPlaying && !gameState.isGameOver) return;
         
+        // Reset state
         gameState = { level: 0, currentQuestion: null, isGameOver: false, isPlaying: true };
         
-        const welcomeText = "DARI STUDIO HAFIZH GAMES! INILAH DIA... <strong>SIAPA MAU JADI DERMAWAN!</strong> Saya, Bang Hafizh, siap memandu Anda merebut 1 Miliar! AYO KITA MULAI!!";
+        const welcomeText = "DARI STUDIO HAFIZH GAMES! INILAH DIA... <strong>SIAPA MAU JADI DERMAWAN!</strong> Saya, Bang Hafizh, siap memandu Anda merebut 1 Miliar! APA ANDA SUDAH SIAP?! AYO KITA MULAI!!";
         displayMessageAsHost(welcomeText);
-        speak("Dari studio Hafizh Games! Inilah dia... SIAPA MAU JADI DERMAWAN! Saya, Bang Hafizh, siap memandu Anda merebut 1 Miliar! Ayo kita mulai!!");
+        
+        // Mainkan musik pembuka dan sambutan host
+        if (audioReady) {
+            sounds.start.start();
+        }
+        // Lanjutkan ke pertanyaan pertama setelah sambutan selesai
+        speak("Dari studio Hafizh Games! Inilah dia... SIAPA MAU JADI DERMAWAN! Saya, Bang Hafizh, siap memandu Anda merebut 1 Miliar! Apa anda sudah siap?! Ayo kita mulai!!", () => {
+            setTimeout(fetchNextQuestion, 1000); // Jeda singkat setelah bicara
+        });
         
         updateHeader();
         updatePrizeLadderUI();
-        
-        setTimeout(fetchNextQuestion, 5000); // Waktu tunggu sedikit lebih lama untuk pesan selamat datang
     }
     
     async function fetchNextQuestion() {
@@ -118,7 +155,11 @@ document.addEventListener('DOMContentLoaded', () => {
             gameState.currentQuestion = await response.json();
             statusDiv.textContent = "";
             displayQuestion(gameState.currentQuestion);
-            speak(`Pertanyaan untuk ${prizeTiers[gameState.level].label}. ${gameState.currentQuestion.question}`);
+            
+            // Host membacakan pertanyaan
+            const prizeText = prizeTiers[gameState.level].label;
+            const questionText = gameState.currentQuestion.question;
+            speak(`Pertanyaan untuk ${prizeText}. ${questionText}`);
 
         } catch (error) {
             console.error(error);
@@ -142,7 +183,6 @@ document.addEventListener('DOMContentLoaded', () => {
             button.className = 'choice-button';
             button.innerHTML = option;
             button.dataset.index = index;
-            // PERUBAHAN: Event handler sekarang menjadi async untuk menangani audio
             button.onclick = () => handleAnswer(button);
             choiceContainer.appendChild(button);
         });
@@ -154,11 +194,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function handleAnswer(selectedButton) {
-        // PERUBAHAN KRUSIAL: Inisialisasi audio pada interaksi pertama
-        if (!audioReady) {
-            await initializeAudio();
-        }
-
         document.querySelectorAll('.choice-button').forEach(btn => btn.disabled = true);
         selectedButton.classList.add('selected');
         
@@ -176,25 +211,27 @@ document.addEventListener('DOMContentLoaded', () => {
         const commentary = await getHostCommentary(isCorrect);
         statusDiv.textContent = "";
         displayMessageAsHost(commentary);
-        speak(commentary);
-
-        if (isCorrect) {
-            if (audioReady) sounds.correct.start();
-            confetti({ particleCount: 150, spread: 90, origin: { y: 0.6 } });
-            
-            if (gameState.level === prizeTiers.length - 1) {
-                displayGameOver(true);
+        
+        // Lanjutkan ke pertanyaan berikutnya setelah komentar selesai
+        speak(commentary, () => {
+            if (isCorrect) {
+                if (audioReady) sounds.correct.start();
+                confetti({ particleCount: 150, spread: 90, origin: { y: 0.6 } });
+                
+                if (gameState.level === prizeTiers.length - 1) {
+                    setTimeout(() => displayGameOver(true), 1000);
+                } else {
+                    gameState.level++;
+                    updateHeader();
+                    updatePrizeLadderUI();
+                    setTimeout(fetchNextQuestion, 2000); // Jeda sebelum pertanyaan berikutnya
+                }
             } else {
-                gameState.level++;
-                updateHeader();
-                updatePrizeLadderUI();
-                setTimeout(fetchNextQuestion, 4000);
+                if (audioReady) sounds.wrong.start();
+                selectedButton.classList.add('incorrect');
+                setTimeout(() => displayGameOver(false), 2000); // Tampilkan layar game over
             }
-        } else {
-            if (audioReady) sounds.wrong.start();
-            selectedButton.classList.add('incorrect');
-            setTimeout(() => displayGameOver(false), 2000);
-        }
+        });
     }
 
     async function getHostCommentary(isCorrect) {
@@ -252,7 +289,10 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>`;
         
         chatContainer.innerHTML = message;
-        document.getElementById('play-again-btn').onclick = startGame; // Tombol main lagi sekarang memanggil startGame
+        // Tombol "Main Lagi" sekarang akan me-reload halaman untuk pengalaman yang bersih
+        document.getElementById('play-again-btn').onclick = () => {
+            window.location.reload();
+        };
         speak(`${title}. ${messageText} ${finalPrizeLabel}`);
     }
 
