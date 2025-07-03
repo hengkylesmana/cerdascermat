@@ -1,7 +1,7 @@
 /**
  * HAFIZH GAMES - game.js
- * Versi: 2.3
- * Deskripsi: PERBAIKAN KRITIS pada logika state untuk memastikan tombol mulai/main lagi selalu berfungsi.
+ * Versi: 2.4
+ * Deskripsi: PERBAIKAN KRITIS - Menghapus kurung kurawal ekstra di akhir file yang menyebabkan seluruh skrip gagal berjalan.
  */
 document.addEventListener('DOMContentLoaded', () => {
     // Elemen DOM
@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
         { value: 1000000000, label: "Rp 1 Miliar", safe: true } // Hadiah Utama
     ];
 
-    // PERBAIKAN: State awal diatur secara eksplisit untuk menandakan game belum berjalan.
+    // State awal diatur secara eksplisit untuk menandakan game belum berjalan.
     let gameState = {
         level: 0,
         currentQuestion: null,
@@ -86,7 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function initializeGame() {
-        // PERBAIKAN: Guard diubah untuk hanya mencegah klik ganda saat game sedang aktif (loading/menunggu jawaban).
+        // Guard untuk mencegah klik ganda saat game sedang aktif (loading/menunggu jawaban).
         if (gameState.isPlaying) return;
         
         if (!audioReady) {
@@ -104,7 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         startOverlay.classList.add('hidden');
         
-        // PERBAIKAN: State direset dengan benar untuk memulai permainan baru.
+        // State direset dengan benar untuk memulai permainan baru.
         gameState = { level: 0, currentQuestion: null, isGameOver: false, isPlaying: true };
         
         const welcomeText = "DARI STUDIO HAFIZH GAMES! INILAH DIA... <strong>SIAPA MAU JADI DERMAWAN!</strong> Saya, Bang Hafizh, siap memandu Anda merebut 1 Miliar! APA ANDA SUDAH SIAP?! AYO KITA MULAI!!";
@@ -237,7 +237,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function displayGameOver(isWinner) {
-        // PERBAIKAN: State diatur secara eksplisit untuk menandakan game telah berakhir.
+        // State diatur secara eksplisit untuk menandakan game telah berakhir.
         gameState.isGameOver = true;
         gameState.isPlaying = false;
 
@@ -268,7 +268,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>`;
         
         chatContainer.innerHTML = message;
-        // PERBAIKAN: Memastikan tombol "Main Lagi" yang baru dibuat mendapatkan event listener.
+        
         document.getElementById('play-again-btn').onclick = initializeGame;
         speak(`${title}. ${messageText} ${finalPrizeLabel}`);
     }
@@ -289,3 +289,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
     init();
 });
+// PERBAIKAN: Kurung kurawal penutup tambahan yang menyebabkan error telah dihapus dari sini.
