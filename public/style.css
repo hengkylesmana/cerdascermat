@@ -1,25 +1,22 @@
 /*
   HAFIZH GAMES - style.css
-  Versi: 1.0
-  Deskripsi: Lembar gaya yang didesain ulang untuk HAFIZH GAMES.
-  Palet Warna: Merah, Oranye, Kuning, Hitam untuk nuansa yang berani dan elegan.
+  Versi: 2.0
+  Deskripsi: Desain ulang dengan tema terang, papan skor, dan peningkatan responsivitas.
 */
 
-/* Import font baru yang lebih modern dan mudah dibaca */
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap');
 
 :root {
-    /* Palet Warna Baru: Api Semangat (Merah, Oranye, Kuning, Hitam) */
-    --primary-color: #FF4136; /* Merah Terang */
-    --secondary-color: #FF851B; /* Oranye */
-    --accent-color: #FFDC00; /* Kuning Cerah */
-    --dark-bg: #111111; /* Hitam Pekat */
-    --container-bg: rgba(30, 30, 30, 0.9);
-    --text-light: #F5F5F5;
-    --text-dark: #333333;
-    --correct-answer: #2ECC40; /* Hijau untuk jawaban benar */
-    --incorrect-answer: #FF4136; /* Merah untuk jawaban salah */
-    --shadow: 0 10px 50px rgba(255, 65, 54, 0.2);
+    --primary-color: #007BFF; /* Biru Cerah */
+    --secondary-color: #FFC107; /* Kuning Emas */
+    --light-bg: #F0F8FF; /* Biru Langit Sangat Terang */
+    --container-bg: rgba(255, 255, 255, 0.95);
+    --text-dark: #212529;
+    --text-light: #FFFFFF;
+    --correct-answer: #28A745; /* Hijau Sukses */
+    --incorrect-answer: #DC3545; /* Merah Gagal */
+    --shadow: 0 10px 30px rgba(0, 123, 255, 0.15);
+    --border-color: #DEE2E6;
 }
 
 html {
@@ -27,177 +24,137 @@ html {
 }
 
 body {
-    font-family: 'Nunito', sans-serif;
-    background-color: var(--dark-bg);
+    font-family: 'Montserrat', sans-serif;
+    background-color: var(--light-bg);
     margin: 0;
-    min-height: 100%;
     display: flex;
     justify-content: center;
     align-items: center;
-    color: var(--text-light);
-    position: relative;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+    color: var(--text-dark);
     padding: 10px;
     box-sizing: border-box;
-    overflow: hidden;
+    overflow-x: hidden;
 }
 
-/* Latar belakang dengan gradien api yang elegan */
+#game-layout {
+    display: flex;
+    flex-direction: row;
+    gap: 20px;
+    width: 100%;
+    max-width: 1200px;
+    height: 95vh;
+}
+
 #interactive-bg {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    top: 0; left: 0; width: 100%; height: 100%;
     z-index: -1;
-    background: radial-gradient(circle at top left, var(--primary-color), transparent 40%),
-                radial-gradient(circle at bottom right, var(--secondary-color), transparent 30%),
-                var(--dark-bg);
-    background-size: 100% 100%;
-    animation: pulseBG 15s ease infinite alternate;
-}
-
-@keyframes pulseBG {
-    from { opacity: 0.6; }
-    to { opacity: 1; }
+    background: linear-gradient(135deg, var(--light-bg) 0%, #D6EFFF 100%);
 }
 
 .container {
-    width: 100%;
-    max-width: 700px;
-    height: 95vh;
+    flex-grow: 1;
     background: var(--container-bg);
     border-radius: 24px;
     box-shadow: var(--shadow);
-    backdrop-filter: blur(15px);
-    -webkit-backdrop-filter: blur(15px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;
     overflow: hidden;
     z-index: 1;
-    position: relative;
+    height: 100%;
 }
 
 header {
-    padding: 12px 20px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    flex-shrink: 0;
-    display: flex;
-    justify-content: center; /* Tengahkan header */
-    align-items: center;
-    cursor: pointer;
-    transition: background-color 0.2s;
-    background-color: rgba(0,0,0,0.2);
+    padding: 15px 20px;
+    border-bottom: 1px solid var(--border-color);
+    text-align: center;
+    background-color: #fff;
 }
 
-.header-content { display: flex; flex-direction: column; align-items: center; gap: 4px; }
-
-.title-group { text-align: center; }
 .title-group h1 {
     margin: 0;
-    font-size: 1.8rem;
-    color: var(--text-light);
+    font-size: 1.6rem;
+    color: var(--primary-color);
     font-weight: 900;
-    letter-spacing: 1px;
-    text-shadow: 0 0 10px var(--accent-color);
 }
-.title-group p { margin: 0; font-size: 0.8rem; color: var(--accent-color); font-weight: 600; }
+.title-group p {
+    margin: 4px 0 0;
+    font-size: 1rem;
+    color: var(--text-dark);
+    font-weight: 700;
+}
 
-.chat-container { flex-grow: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+.chat-container {
+    flex-grow: 1;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
 
 .chat-message {
-    padding: 14px 20px;
-    border-radius: 20px;
-    max-width: 90%;
-    line-height: 1.6;
-    word-wrap: break-word;
-    font-size: 0.95rem;
+    width: 100%;
     animation: fadeIn 0.5s ease;
-    border: 1px solid transparent;
 }
 
-@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-.user-message {
-    background-color: var(--secondary-color);
-    align-self: flex-end;
-    color: var(--dark-bg);
-    font-weight: 700;
-    border-bottom-right-radius: 5px;
-}
-
-.ai-message, .ai-system-message {
-    background-color: #222;
-    align-self: flex-start;
-    border-bottom-left-radius: 5px;
-    border-color: rgba(255,255,255,0.1);
-}
+@keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
 
 .ai-system-message {
     font-style: italic;
-    color: var(--accent-color);
-    width: 100%;
-    text-align: center;
-    max-width: 100%;
-    background-color: transparent;
-    padding: 0;
-    animation: none;
     font-weight: 600;
+    color: var(--primary-color);
+    text-align: center;
+    margin-bottom: 20px;
 }
 
-/* Styling untuk pertanyaan kuis */
 .question-box {
-    background: linear-gradient(145deg, #333, #222);
-    border: 1px solid var(--secondary-color);
-    padding: 20px;
+    background: #fff;
+    border: 1px solid var(--border-color);
+    padding: 25px;
     border-radius: 16px;
-    margin-top: 10px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
 }
 .question-text {
     font-weight: 700;
-    font-size: 1.1rem;
-    margin-bottom: 15px;
+    font-size: 1.2rem;
+    margin-bottom: 20px;
     text-align: center;
+    line-height: 1.5;
 }
 
 .choice-container {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    margin-top: 12px;
+    gap: 15px;
 }
 
 .choice-button {
-    width: 100%;
-    background-color: rgba(255,255,255, 0.05);
-    border: 1px solid var(--secondary-color);
-    color: var(--text-light);
+    background-color: #fff;
+    border: 2px solid var(--border-color);
+    color: var(--text-dark);
     padding: 15px;
     border-radius: 12px;
     text-align: center;
     cursor: pointer;
     transition: all 0.2s ease-in-out;
-    font-weight: 600;
-    font-size: 0.9rem;
+    font-weight: 700;
+    font-size: 0.95rem;
 }
 
 .choice-button:hover:not(:disabled) {
     background-color: var(--secondary-color);
-    color: var(--dark-bg);
+    border-color: var(--secondary-color);
+    color: var(--text-dark);
     transform: translateY(-3px);
-    box-shadow: 0 5px 15px rgba(255, 133, 27, 0.3);
 }
 .choice-button.selected {
-    background-color: var(--accent-color);
-    color: var(--dark-bg);
-    border-color: var(--accent-color);
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
 }
 .choice-button:disabled {
     cursor: not-allowed;
-    opacity: 0.6;
+    filter: grayscale(80%);
 }
 .choice-button.correct {
     background-color: var(--correct-answer);
@@ -212,107 +169,155 @@ header {
 }
 
 @keyframes pulseCorrect {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.05); }
-    100% { transform: scale(1); }
+    0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); }
 }
 
-
-.input-container { display: none; /* Disembunyikan karena interaksi via tombol */ }
-footer { display: none; /* Footer tidak relevan untuk game */ }
-
-/* Modal Awal (Start Overlay) */
-.modal-overlay {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex;
-    justify-content: center; align-items: center; z-index: 1000; opacity: 1;
-    transition: opacity 0.5s ease, visibility 0.5s; visibility: visible; background-color: rgba(0,0,0,0.7);
-}
-.modal-overlay.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
-
-.start-content {
+.status-info {
+    padding: 10px 20px;
+    font-size: 0.9rem;
+    color: var(--text-dark);
     text-align: center;
-    padding: 40px;
+    min-height: 1.5rem;
+    font-weight: 600;
+}
+
+/* Papan Skor */
+.scoreboard-container {
+    width: 320px;
+    flex-shrink: 0;
     background: var(--container-bg);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
     border-radius: 24px;
     box-shadow: var(--shadow);
+    border: 1px solid var(--border-color);
+    padding: 20px;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    max-width: 90%;
-    width: 500px;
-    box-sizing: border-box;
-    animation: popUp 0.6s cubic-bezier(0.165, 0.84, 0.44, 1) forwards;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    height: 100%;
 }
-
-@keyframes popUp { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
-
-.start-title-container {
-    margin-bottom: 24px;
-}
-
-.start-title-container p {
-    margin: 0;
-    line-height: 1.3;
-}
-.start-title-container p:nth-child(1) {
-    font-size: 2.8rem;
+.scoreboard-title {
+    text-align: center;
+    font-size: 1.3rem;
     font-weight: 900;
-    color: var(--text-light);
-    text-shadow: 0 0 15px var(--primary-color);
+    color: var(--primary-color);
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--border-color);
 }
-.start-title-container p:nth-child(2) {
-    font-size: 1.2rem;
-    font-weight: 700;
-    color: var(--accent-color);
-    letter-spacing: 1px;
+.prize-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column-reverse; /* Hadiah tertinggi di atas */
+    flex-grow: 1;
 }
-
-.info-box {
-    font-size: 1rem;
-    color: var(--text-light);
-    margin-bottom: 32px;
-    line-height: 1.7;
-}
-
-.start-content .modal-button {
-    background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
-    color: white;
-    border: none;
-    padding: 18px 30px;
-    border-radius: 50px;
-    cursor: pointer;
-    font-size: 1.1rem;
+.prize-tier {
+    padding: 10px 15px;
+    margin-bottom: 5px;
+    border-radius: 8px;
     font-weight: 700;
     transition: all 0.3s ease;
-    box-shadow: 0 5px 20px rgba(255, 65, 54, 0.4);
-    width: 100%;
-    box-sizing: border-box;
-    text-align: center;
-    letter-spacing: 0.5px;
+    text-align: right;
+    border: 2px solid transparent;
+}
+.prize-tier.current {
+    background-color: var(--secondary-color);
+    color: var(--text-dark);
+    transform: scale(1.05);
+    box-shadow: 0 4px 10px rgba(255,193,7,0.5);
+}
+.prize-tier.safe-haven {
+    font-weight: 900;
+    color: var(--primary-color);
 }
 
-.start-content .modal-button:hover {
-    transform: translateY(-5px) scale(1.05);
-    box-shadow: 0 10px 30px rgba(255, 65, 54, 0.5);
+/* Modal Awal */
+.modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex;
+    justify-content: center; align-items: center; z-index: 1000;
+    transition: opacity 0.5s ease, visibility 0.5s;
+    background-color: rgba(0,0,0,0.5);
+}
+.modal-overlay.hidden { opacity: 0; visibility: hidden; }
+
+.start-content {
+    text-align: center; padding: 40px; background: #fff;
+    border-radius: 24px; box-shadow: var(--shadow);
+    max-width: 90%; width: 500px;
+    animation: popUp 0.6s cubic-bezier(0.165, 0.84, 0.44, 1) forwards;
+}
+@keyframes popUp { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+
+.start-title-container p:nth-child(1) {
+    font-size: 2.5rem; font-weight: 900; color: var(--primary-color);
+}
+.start-title-container p:nth-child(2) {
+    font-size: 1.1rem; font-weight: 700; color: var(--text-dark);
+}
+.info-box { font-size: 1rem; color: var(--text-dark); margin: 20px 0 30px; }
+
+.start-content .modal-button {
+    background: var(--primary-color);
+    color: white; border: none; padding: 18px 30px; border-radius: 50px;
+    cursor: pointer; font-size: 1.1rem; font-weight: 700;
+    transition: all 0.3s ease;
+}
+.start-content .modal-button:hover { transform: translateY(-5px); box-shadow: 0 5px 15px rgba(0,123,255,0.3); }
+
+
+/* Responsivitas */
+@media (max-width: 992px) {
+    #game-layout {
+        flex-direction: column;
+        height: auto;
+        max-height: none;
+    }
+    .container {
+        order: 2; /* Game di bawah papan skor */
+        height: auto;
+    }
+    .scoreboard-container {
+        order: 1; /* Papan skor di atas */
+        width: 100%;
+        box-sizing: border-box;
+        height: auto;
+        max-height: 250px; /* Batasi tinggi papan skor */
+    }
+    .prize-list {
+        flex-direction: row; /* Papan skor jadi horizontal */
+        overflow-x: auto;
+        padding-bottom: 10px;
+    }
+    .prize-tier {
+        flex: 0 0 120px; /* Lebar setiap item hadiah */
+        margin-right: 10px;
+        text-align: center;
+        writing-mode: vertical-rl; /* Teks vertikal */
+        transform: rotate(180deg);
+        padding: 15px 5px;
+    }
+    .prize-tier.current {
+        transform: scale(1.05) rotate(180deg);
+    }
 }
 
 @media (max-width: 768px) {
-    body { padding: 0; align-items: flex-start; }
-    .container {
-        height: 100vh;
-        height: 100dvh;
-        width: 100%;
-        max-width: 100%;
-        border-radius: 0;
-        box-shadow: none;
-        border: none;
+    body { padding: 0; }
+    #game-layout {
+        gap: 0;
     }
-    .title-group h1 { font-size: 1.5rem; }
-    .start-content { width: 90%; padding: 24px; }
-    .start-title-container p:nth-child(1) { font-size: 2rem; }
-    .start-title-container p:nth-child(2) { font-size: 1rem; }
-    .choice-container { grid-template-columns: 1fr; }
+    .container, .scoreboard-container {
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+    }
+    .scoreboard-container {
+        border-top: none;
+    }
+    .container {
+        border-bottom: none;
+    }
+    .choice-container {
+        grid-template-columns: 1fr;
+    }
 }
