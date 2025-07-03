@@ -1,8 +1,8 @@
 /**
  * HAFIZH GAMES - game.js
- * Versi: 8.0
- * Deskripsi: PERBAIKAN KETAHANAN FINAL - Menambahkan timeout pada getHostCommentary dan menyederhanakan
- * alur async di handleAnswer untuk mencegah game macet setelah pertanyaan pertama.
+ * Versi: 9.0
+ * Deskripsi: PERBAIKAN FINAL - Mengimplementasikan saran pengguna dengan menambahkan tombol "SOAL BERIKUTNYA"
+ * setelah jawaban benar untuk memastikan alur permainan tidak macet.
  */
 document.addEventListener('DOMContentLoaded', () => {
     // Elemen DOM
@@ -171,7 +171,6 @@ document.addEventListener('DOMContentLoaded', () => {
         chatContainer.appendChild(messageElement);
     }
 
-    // PERBAIKAN: Alur dibuat lebih linear dan tangguh
     async function handleAnswer(selectedButton) {
         document.querySelectorAll('.choice-button').forEach(btn => btn.disabled = true);
         selectedButton.classList.add('selected');
@@ -187,37 +186,56 @@ document.addEventListener('DOMContentLoaded', () => {
         const correctButton = document.querySelector(`.choice-button[data-index='${correctIndex}']`);
         correctButton.classList.add('correct');
         
-        const commentary = await getHostCommentary(isCorrect); // Sekarang dengan timeout
+        const commentary = await getHostCommentary(isCorrect);
         statusDiv.textContent = "";
         displayMessageAsHost(commentary);
         speak(commentary);
         
-        await delay(1500); // Jeda setelah komentar muncul
-
         if (isCorrect) {
             if (audioReady) sounds.correct.start();
             confetti({ particleCount: 150, spread: 90, origin: { y: 0.6 } });
-            await delay(1500); // Jeda untuk menikmati konfeti
-
+            
+            // PERBAIKAN: Cek apakah ini pertanyaan terakhir
             if (gameState.level === prizeTiers.length - 1) {
+                await delay(2000); // Jeda untuk selebrasi
                 displayGameOver(true);
             } else {
-                gameState.level++;
-                updateHeader();
-                updatePrizeLadderUI();
-                fetchNextQuestion();
+                // PERBAIKAN: Tampilkan tombol "Soal Berikutnya"
+                displayNextQuestionButton();
             }
         } else {
             if (audioReady) sounds.wrong.start();
             selectedButton.classList.add('incorrect');
+            await delay(2000); // Jeda sebelum game over
             displayGameOver(false);
         }
     }
 
-    // PERBAIKAN: Menambahkan timeout pada getHostCommentary
+    // PERBAIKAN: Fungsi baru untuk menampilkan tombol lanjut
+    function displayNextQuestionButton() {
+        const nextButtonContainer = document.createElement('div');
+        nextButtonContainer.className = 'choice-container'; // Memakai style yang sudah ada
+        nextButtonContainer.style.gridTemplateColumns = '1fr'; // Ubah jadi 1 kolom
+        nextButtonContainer.style.marginTop = '20px';
+
+        const nextButton = document.createElement('button');
+        nextButton.className = 'choice-button';
+        nextButton.textContent = 'SOAL BERIKUTNYA';
+        nextButton.onclick = () => {
+            gameState.level++;
+            updateHeader();
+            updatePrizeLadderUI();
+            fetchNextQuestion();
+        };
+
+        nextButtonContainer.appendChild(nextButton);
+        // Tambahkan tombol di bawah box pertanyaan yang ada
+        chatContainer.querySelector('.question-box').appendChild(nextButtonContainer);
+    }
+
     async function getHostCommentary(isCorrect) {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // Timeout 10 detik
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
 
         try {
             const q = gameState.currentQuestion;
@@ -240,7 +258,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             clearTimeout(timeoutId);
             console.error("Gagal mendapatkan komentar host:", error);
-            // Memberikan komentar default jika gagal
             return isCorrect ? "DAHSYAT! BENAR SEKALI! LANJUTKAN!" : "WADUH, BELUM TEPAT!";
         }
     }
