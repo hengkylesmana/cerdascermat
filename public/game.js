@@ -1,8 +1,9 @@
 /**
  * HAFIZH GAMES - game.js
- * Versi: 10.0
- * Deskripsi: PERBAIKAN KRITIS - Memperbaiki logika tampilan agar tombol "SOAL BERIKUTNYA"
- * dijamin muncul dengan tidak menghapus kotak pertanyaan saat menampilkan komentar host.
+ * Versi: 11.0
+ * Deskripsi: PEROMBAKAN TOTAL - Mengadopsi alur "Who Wants to Be a Millionaire".
+ * Menghilangkan tombol "Soal Berikutnya" dan menggantinya dengan alur otomatis yang menegangkan
+ * untuk pengalaman bermain yang lebih baik dan andal.
  */
 document.addEventListener('DOMContentLoaded', () => {
     // Elemen DOM
@@ -171,68 +172,54 @@ document.addEventListener('DOMContentLoaded', () => {
         chatContainer.appendChild(messageElement);
     }
 
+    // PEROMBAKAN TOTAL: Alur baru ala "Millionaire"
     async function handleAnswer(selectedButton) {
+        // 1. Kunci Jawaban & Jeda Menegangkan
         document.querySelectorAll('.choice-button').forEach(btn => btn.disabled = true);
-        selectedButton.classList.add('selected');
-        
-        statusDiv.textContent = "Hmm, Bang Hafizh lagi ngecek jawabanmu...";
-        if (audioReady) sounds.wait.triggerAttackRelease("E4", "8n");
-        await delay(2000);
+        selectedButton.classList.add('selected'); // Gaya "pending"
+        statusDiv.textContent = `Jawaban Anda: ${selectedButton.textContent}. Apakah itu jawaban yang tepat?`;
+        if (audioReady) sounds.wait.triggerAttackRelease("A4", "1n"); // Suara suspense
+        await delay(3000); // Jeda dramatis
 
+        // 2. Ungkap Hasilnya
         const selectedIndex = parseInt(selectedButton.dataset.index);
         const correctIndex = gameState.currentQuestion.correct_answer_index;
         const isCorrect = selectedIndex === correctIndex;
-
         const correctButton = document.querySelector(`.choice-button[data-index='${correctIndex}']`);
-        correctButton.classList.add('correct');
         
-        const commentary = await getHostCommentary(isCorrect);
-        statusDiv.textContent = "";
-        
-        // PERBAIKAN KRITIS: Jangan panggil displayMessageAsHost agar tidak menghapus question-box.
-        // Cukup ucapkan komentarnya saja.
-        speak(commentary);
-        
+        selectedButton.classList.remove('selected'); // Hapus gaya "pending"
+        correctButton.classList.add('correct'); // Tampilkan jawaban benar (hijau)
+
         if (isCorrect) {
             if (audioReady) sounds.correct.start();
             confetti({ particleCount: 150, spread: 90, origin: { y: 0.6 } });
-            
+        } else {
+            selectedButton.classList.add('incorrect'); // Tampilkan jawaban salah (merah)
+            if (audioReady) sounds.wrong.start();
+        }
+
+        // 3. Komentar Host (diucapkan saja, tidak memblokir)
+        const commentary = await getHostCommentary(isCorrect);
+        statusDiv.textContent = commentary.replace(/<[^>]*>/g, ''); // Tampilkan komentar di status
+        speak(commentary);
+
+        // 4. Jeda untuk melihat hasil
+        await delay(4000);
+
+        // 5. Lanjutkan Permainan
+        if (isCorrect) {
             if (gameState.level === prizeTiers.length - 1) {
-                await delay(2000);
-                displayGameOver(true);
+                displayGameOver(true); // Menang!
             } else {
-                // Tampilkan tombol "Soal Berikutnya"
-                displayNextQuestionButton();
+                // Lanjut ke level berikutnya secara otomatis
+                gameState.level++;
+                updateHeader();
+                updatePrizeLadderUI();
+                fetchNextQuestion();
             }
         } else {
-            if (audioReady) sounds.wrong.start();
-            selectedButton.classList.add('incorrect');
-            await delay(2000);
-            displayGameOver(false);
+            displayGameOver(false); // Kalah
         }
-    }
-
-    function displayNextQuestionButton() {
-        const questionBox = chatContainer.querySelector('.question-box');
-        if (!questionBox) {
-            console.error("Kesalahan Kritis: .question-box tidak ditemukan!");
-            return;
-        }
-
-        const nextButton = document.createElement('button');
-        nextButton.className = 'choice-button';
-        nextButton.textContent = 'SOAL BERIKUTNYA';
-        nextButton.style.marginTop = '20px';
-        nextButton.style.gridColumn = '1 / -1'; // Membuat tombol membentang penuh jika di dalam grid
-
-        nextButton.onclick = () => {
-            gameState.level++;
-            updateHeader();
-            updatePrizeLadderUI();
-            fetchNextQuestion();
-        };
-
-        questionBox.appendChild(nextButton);
     }
 
     async function getHostCommentary(isCorrect) {
@@ -260,19 +247,8 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             clearTimeout(timeoutId);
             console.error("Gagal mendapatkan komentar host:", error);
-            return isCorrect ? "DAHSYAT! BENAR SEKALI! SILAKAN LANJUT." : "WADUH, BELUM TEPAT!";
+            return isCorrect ? "TEPAT SEKALI! LUAR BIASA! LANJUT!" : "YAAH, SAYANG SEKALI BUKAN ITU JAWABANNYA.";
         }
-    }
-    
-    // Fungsi ini tidak lagi digunakan untuk mencegah bug, tapi dibiarkan jika diperlukan nanti.
-    function displayMessageAsHost(message) {
-        // Fungsi ini sengaja dikosongkan untuk mencegah bug terulang.
-        // Komentar host kini hanya diucapkan.
-        const commentaryElement = document.createElement('div');
-        commentaryElement.className = 'ai-system-message';
-        commentaryElement.style.marginTop = '15px';
-        commentaryElement.innerHTML = message;
-        chatContainer.querySelector('.question-box').appendChild(commentaryElement);
     }
 
     function displayGameOver(isWinner) {
