@@ -1,8 +1,8 @@
 /**
  * HAFIZH GAMES - game.js
- * Versi: 9.0
- * Deskripsi: PERBAIKAN FINAL - Mengimplementasikan saran pengguna dengan menambahkan tombol "SOAL BERIKUTNYA"
- * setelah jawaban benar untuk memastikan alur permainan tidak macet.
+ * Versi: 10.0
+ * Deskripsi: PERBAIKAN KRITIS - Memperbaiki logika tampilan agar tombol "SOAL BERIKUTNYA"
+ * dijamin muncul dengan tidak menghapus kotak pertanyaan saat menampilkan komentar host.
  */
 document.addEventListener('DOMContentLoaded', () => {
     // Elemen DOM
@@ -188,39 +188,43 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const commentary = await getHostCommentary(isCorrect);
         statusDiv.textContent = "";
-        displayMessageAsHost(commentary);
+        
+        // PERBAIKAN KRITIS: Jangan panggil displayMessageAsHost agar tidak menghapus question-box.
+        // Cukup ucapkan komentarnya saja.
         speak(commentary);
         
         if (isCorrect) {
             if (audioReady) sounds.correct.start();
             confetti({ particleCount: 150, spread: 90, origin: { y: 0.6 } });
             
-            // PERBAIKAN: Cek apakah ini pertanyaan terakhir
             if (gameState.level === prizeTiers.length - 1) {
-                await delay(2000); // Jeda untuk selebrasi
+                await delay(2000);
                 displayGameOver(true);
             } else {
-                // PERBAIKAN: Tampilkan tombol "Soal Berikutnya"
+                // Tampilkan tombol "Soal Berikutnya"
                 displayNextQuestionButton();
             }
         } else {
             if (audioReady) sounds.wrong.start();
             selectedButton.classList.add('incorrect');
-            await delay(2000); // Jeda sebelum game over
+            await delay(2000);
             displayGameOver(false);
         }
     }
 
-    // PERBAIKAN: Fungsi baru untuk menampilkan tombol lanjut
     function displayNextQuestionButton() {
-        const nextButtonContainer = document.createElement('div');
-        nextButtonContainer.className = 'choice-container'; // Memakai style yang sudah ada
-        nextButtonContainer.style.gridTemplateColumns = '1fr'; // Ubah jadi 1 kolom
-        nextButtonContainer.style.marginTop = '20px';
+        const questionBox = chatContainer.querySelector('.question-box');
+        if (!questionBox) {
+            console.error("Kesalahan Kritis: .question-box tidak ditemukan!");
+            return;
+        }
 
         const nextButton = document.createElement('button');
         nextButton.className = 'choice-button';
         nextButton.textContent = 'SOAL BERIKUTNYA';
+        nextButton.style.marginTop = '20px';
+        nextButton.style.gridColumn = '1 / -1'; // Membuat tombol membentang penuh jika di dalam grid
+
         nextButton.onclick = () => {
             gameState.level++;
             updateHeader();
@@ -228,9 +232,7 @@ document.addEventListener('DOMContentLoaded', () => {
             fetchNextQuestion();
         };
 
-        nextButtonContainer.appendChild(nextButton);
-        // Tambahkan tombol di bawah box pertanyaan yang ada
-        chatContainer.querySelector('.question-box').appendChild(nextButtonContainer);
+        questionBox.appendChild(nextButton);
     }
 
     async function getHostCommentary(isCorrect) {
@@ -258,12 +260,19 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             clearTimeout(timeoutId);
             console.error("Gagal mendapatkan komentar host:", error);
-            return isCorrect ? "DAHSYAT! BENAR SEKALI! LANJUTKAN!" : "WADUH, BELUM TEPAT!";
+            return isCorrect ? "DAHSYAT! BENAR SEKALI! SILAKAN LANJUT." : "WADUH, BELUM TEPAT!";
         }
     }
     
+    // Fungsi ini tidak lagi digunakan untuk mencegah bug, tapi dibiarkan jika diperlukan nanti.
     function displayMessageAsHost(message) {
-        chatContainer.innerHTML = `<div class="ai-system-message">${message}</div>`;
+        // Fungsi ini sengaja dikosongkan untuk mencegah bug terulang.
+        // Komentar host kini hanya diucapkan.
+        const commentaryElement = document.createElement('div');
+        commentaryElement.className = 'ai-system-message';
+        commentaryElement.style.marginTop = '15px';
+        commentaryElement.innerHTML = message;
+        chatContainer.querySelector('.question-box').appendChild(commentaryElement);
     }
 
     function displayGameOver(isWinner) {
