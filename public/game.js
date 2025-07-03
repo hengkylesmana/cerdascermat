@@ -1,8 +1,8 @@
 /**
  * HAFIZH GAMES - game.js
- * Versi: 4.0
- * Deskripsi: Penyempurnaan alur permainan dengan tombol mulai, musik pembuka,
- * dan pembacaan soal oleh host untuk pengalaman yang lebih imersif.
+ * Versi: 5.0
+ * Deskripsi: PERBAIKAN KRITIS - Memisahkan alur logika game dari event suara (Text-to-Speech)
+ * untuk mencegah game macet saat suara gagal diputar.
  */
 document.addEventListener('DOMContentLoaded', () => {
     // Elemen DOM
@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const headerSubtitle = document.getElementById('header-subtitle');
     const prizeList = document.getElementById('prize-list');
     
-    // PENYEMPURNAAN: Elemen untuk layar pembuka
+    // Elemen untuk layar pembuka
     const startScreen = document.getElementById('start-screen');
     const startGameBtn = document.getElementById('start-game-btn');
     const gameLayout = document.getElementById('game-layout');
@@ -40,7 +40,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let sounds;
     let audioReady = false;
 
-    // Fungsi untuk memuat semua file suara
     function setupAudio() {
         if (audioReady) return;
         try {
@@ -57,26 +56,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    // Fungsi Text-to-Speech
-    function speak(text, callback) {
-        if (!('speechSynthesis' in window)) {
-            if (callback) callback();
-            return;
-        }
+    // Fungsi Text-to-Speech (tanpa callback yang memblokir)
+    function speak(text) {
+        if (!('speechSynthesis' in window)) return;
         window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(text.replace(/<[^>]*>/g, ''));
         utterance.lang = 'id-ID';
         utterance.rate = 1.1;
         utterance.pitch = 1.0;
-        // Panggil callback setelah selesai bicara
-        utterance.onend = callback;
         window.speechSynthesis.speak(utterance);
     }
 
-    // Fungsi inisialisasi utama
     function init() {
         populatePrizeList();
-        // Menambahkan event listener ke tombol "Mulai Permainan"
         startGameBtn.addEventListener('click', initializeGame);
     }
 
@@ -92,46 +84,39 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Fungsi yang dipanggil saat tombol "Mulai" diklik
     async function initializeGame() {
-        // Nonaktifkan tombol untuk mencegah klik ganda
         startGameBtn.disabled = true;
         startGameBtn.textContent = "Memuat...";
 
-        // 1. Inisialisasi konteks audio (wajib karena interaksi pengguna)
         try {
             await Tone.start();
             console.log("Konteks audio berhasil dimulai!");
-            setupAudio(); // Muat semua suara setelah konteks siap
+            setupAudio();
         } catch (e) {
             console.error("Gagal memulai konteks audio:", e);
         }
 
-        // 2. Sembunyikan layar pembuka dan tampilkan game
         startScreen.style.display = 'none';
         gameLayout.style.display = 'flex';
-
-        // 3. Mulai alur permainan
         startGame();
     }
 
     function startGame() {
         if (gameState.isPlaying && !gameState.isGameOver) return;
         
-        // Reset state
         gameState = { level: 0, currentQuestion: null, isGameOver: false, isPlaying: true };
         
         const welcomeText = "DARI STUDIO HAFIZH GAMES! INILAH DIA... <strong>SIAPA MAU JADI DERMAWAN!</strong> Saya, Bang Hafizh, siap memandu Anda merebut 1 Miliar! APA ANDA SUDAH SIAP?! AYO KITA MULAI!!";
         displayMessageAsHost(welcomeText);
         
-        // Mainkan musik pembuka dan sambutan host
         if (audioReady) {
             sounds.start.start();
         }
-        // Lanjutkan ke pertanyaan pertama setelah sambutan selesai
-        speak("Dari studio Hafizh Games! Inilah dia... SIAPA MAU JADI DERMAWAN! Saya, Bang Hafizh, siap memandu Anda merebut 1 Miliar! Apa anda sudah siap?! Ayo kita mulai!!", () => {
-            setTimeout(fetchNextQuestion, 1000); // Jeda singkat setelah bicara
-        });
+        speak("Dari studio Hafizh Games! Inilah dia... SIAPA MAU JADI DERMAWAN! Saya, Bang Hafizh, siap memandu Anda merebut 1 Miliar! Apa anda sudah siap?! Ayo kita mulai!!");
+        
+        // PERBAIKAN: Panggil fetchNextQuestion setelah jeda waktu, tidak menunggu suara selesai.
+        // Ini memastikan game berjalan bahkan jika suara gagal.
+        setTimeout(fetchNextQuestion, 6000); // 6 detik untuk memberi waktu sambutan.
         
         updateHeader();
         updatePrizeLadderUI();
@@ -156,7 +141,6 @@ document.addEventListener('DOMContentLoaded', () => {
             statusDiv.textContent = "";
             displayQuestion(gameState.currentQuestion);
             
-            // Host membacakan pertanyaan
             const prizeText = prizeTiers[gameState.level].label;
             const questionText = gameState.currentQuestion.question;
             speak(`Pertanyaan untuk ${prizeText}. ${questionText}`);
@@ -212,26 +196,29 @@ document.addEventListener('DOMContentLoaded', () => {
         statusDiv.textContent = "";
         displayMessageAsHost(commentary);
         
-        // Lanjutkan ke pertanyaan berikutnya setelah komentar selesai
-        speak(commentary, () => {
+        // PERBAIKAN: Suara komentar diputar, tapi tidak memblokir alur game.
+        speak(commentary);
+        
+        // Alur game dilanjutkan setelah jeda singkat.
+        setTimeout(() => {
             if (isCorrect) {
                 if (audioReady) sounds.correct.start();
                 confetti({ particleCount: 150, spread: 90, origin: { y: 0.6 } });
                 
                 if (gameState.level === prizeTiers.length - 1) {
-                    setTimeout(() => displayGameOver(true), 1000);
+                    displayGameOver(true);
                 } else {
                     gameState.level++;
                     updateHeader();
                     updatePrizeLadderUI();
-                    setTimeout(fetchNextQuestion, 2000); // Jeda sebelum pertanyaan berikutnya
+                    setTimeout(fetchNextQuestion, 1500);
                 }
             } else {
                 if (audioReady) sounds.wrong.start();
                 selectedButton.classList.add('incorrect');
-                setTimeout(() => displayGameOver(false), 2000); // Tampilkan layar game over
+                displayGameOver(false);
             }
-        });
+        }, 2000); // Jeda 2 detik setelah komentar muncul di layar.
     }
 
     async function getHostCommentary(isCorrect) {
@@ -289,7 +276,6 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>`;
         
         chatContainer.innerHTML = message;
-        // Tombol "Main Lagi" sekarang akan me-reload halaman untuk pengalaman yang bersih
         document.getElementById('play-again-btn').onclick = () => {
             window.location.reload();
         };
@@ -310,6 +296,5 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Memulai seluruh proses!
     init();
 });
