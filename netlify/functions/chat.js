@@ -1,152 +1,318 @@
-const fetch = require('node-fetch');
-require('dotenv').config();
+/*
+  HAFIZH GAMES - style.css
+  Versi: 1.0
+  Deskripsi: Lembar gaya yang didesain ulang untuk HAFIZH GAMES.
+  Palet Warna: Merah, Oranye, Kuning, Hitam untuk nuansa yang berani dan elegan.
+*/
 
-const GEMINI_API_KEY = process.env.GOOGLE_GEMINI_API_KEY;
+/* Import font baru yang lebih modern dan mudah dibaca */
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;900&display=swap');
 
-exports.handler = async (event) => {
-    if (event.httpMethod !== 'POST') {
-        return { statusCode: 405, body: JSON.stringify({ error: 'Method Not Allowed' }) };
+:root {
+    /* Palet Warna Baru: Api Semangat (Merah, Oranye, Kuning, Hitam) */
+    --primary-color: #FF4136; /* Merah Terang */
+    --secondary-color: #FF851B; /* Oranye */
+    --accent-color: #FFDC00; /* Kuning Cerah */
+    --dark-bg: #111111; /* Hitam Pekat */
+    --container-bg: rgba(30, 30, 30, 0.9);
+    --text-light: #F5F5F5;
+    --text-dark: #333333;
+    --correct-answer: #2ECC40; /* Hijau untuk jawaban benar */
+    --incorrect-answer: #FF4136; /* Merah untuk jawaban salah */
+    --shadow: 0 10px 50px rgba(255, 65, 54, 0.2);
+}
+
+html {
+    height: 100%;
+}
+
+body {
+    font-family: 'Nunito', sans-serif;
+    background-color: var(--dark-bg);
+    margin: 0;
+    min-height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: var(--text-light);
+    position: relative;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    padding: 10px;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+/* Latar belakang dengan gradien api yang elegan */
+#interactive-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    background: radial-gradient(circle at top left, var(--primary-color), transparent 40%),
+                radial-gradient(circle at bottom right, var(--secondary-color), transparent 30%),
+                var(--dark-bg);
+    background-size: 100% 100%;
+    animation: pulseBG 15s ease infinite alternate;
+}
+
+@keyframes pulseBG {
+    from { opacity: 0.6; }
+    to { opacity: 1; }
+}
+
+.container {
+    width: 100%;
+    max-width: 700px;
+    height: 95vh;
+    background: var(--container-bg);
+    border-radius: 24px;
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    z-index: 1;
+    position: relative;
+}
+
+header {
+    padding: 12px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    flex-shrink: 0;
+    display: flex;
+    justify-content: center; /* Tengahkan header */
+    align-items: center;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    background-color: rgba(0,0,0,0.2);
+}
+
+.header-content { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+
+.title-group { text-align: center; }
+.title-group h1 {
+    margin: 0;
+    font-size: 1.8rem;
+    color: var(--text-light);
+    font-weight: 900;
+    letter-spacing: 1px;
+    text-shadow: 0 0 10px var(--accent-color);
+}
+.title-group p { margin: 0; font-size: 0.8rem; color: var(--accent-color); font-weight: 600; }
+
+.chat-container { flex-grow: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+
+.chat-message {
+    padding: 14px 20px;
+    border-radius: 20px;
+    max-width: 90%;
+    line-height: 1.6;
+    word-wrap: break-word;
+    font-size: 0.95rem;
+    animation: fadeIn 0.5s ease;
+    border: 1px solid transparent;
+}
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+.user-message {
+    background-color: var(--secondary-color);
+    align-self: flex-end;
+    color: var(--dark-bg);
+    font-weight: 700;
+    border-bottom-right-radius: 5px;
+}
+
+.ai-message, .ai-system-message {
+    background-color: #222;
+    align-self: flex-start;
+    border-bottom-left-radius: 5px;
+    border-color: rgba(255,255,255,0.1);
+}
+
+.ai-system-message {
+    font-style: italic;
+    color: var(--accent-color);
+    width: 100%;
+    text-align: center;
+    max-width: 100%;
+    background-color: transparent;
+    padding: 0;
+    animation: none;
+    font-weight: 600;
+}
+
+/* Styling untuk pertanyaan kuis */
+.question-box {
+    background: linear-gradient(145deg, #333, #222);
+    border: 1px solid var(--secondary-color);
+    padding: 20px;
+    border-radius: 16px;
+    margin-top: 10px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+}
+.question-text {
+    font-weight: 700;
+    font-size: 1.1rem;
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+.choice-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.choice-button {
+    width: 100%;
+    background-color: rgba(255,255,255, 0.05);
+    border: 1px solid var(--secondary-color);
+    color: var(--text-light);
+    padding: 15px;
+    border-radius: 12px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.choice-button:hover:not(:disabled) {
+    background-color: var(--secondary-color);
+    color: var(--dark-bg);
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(255, 133, 27, 0.3);
+}
+.choice-button.selected {
+    background-color: var(--accent-color);
+    color: var(--dark-bg);
+    border-color: var(--accent-color);
+}
+.choice-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+.choice-button.correct {
+    background-color: var(--correct-answer);
+    color: white;
+    border-color: var(--correct-answer);
+    animation: pulseCorrect 0.5s;
+}
+.choice-button.incorrect {
+    background-color: var(--incorrect-answer);
+    color: white;
+    border-color: var(--incorrect-answer);
+}
+
+@keyframes pulseCorrect {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+
+.input-container { display: none; /* Disembunyikan karena interaksi via tombol */ }
+footer { display: none; /* Footer tidak relevan untuk game */ }
+
+/* Modal Awal (Start Overlay) */
+.modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex;
+    justify-content: center; align-items: center; z-index: 1000; opacity: 1;
+    transition: opacity 0.5s ease, visibility 0.5s; visibility: visible; background-color: rgba(0,0,0,0.7);
+}
+.modal-overlay.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+
+.start-content {
+    text-align: center;
+    padding: 40px;
+    background: var(--container-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 24px;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    max-width: 90%;
+    width: 500px;
+    box-sizing: border-box;
+    animation: popUp 0.6s cubic-bezier(0.165, 0.84, 0.44, 1) forwards;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+@keyframes popUp { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+
+.start-title-container {
+    margin-bottom: 24px;
+}
+
+.start-title-container p {
+    margin: 0;
+    line-height: 1.3;
+}
+.start-title-container p:nth-child(1) {
+    font-size: 2.8rem;
+    font-weight: 900;
+    color: var(--text-light);
+    text-shadow: 0 0 15px var(--primary-color);
+}
+.start-title-container p:nth-child(2) {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--accent-color);
+    letter-spacing: 1px;
+}
+
+.info-box {
+    font-size: 1rem;
+    color: var(--text-light);
+    margin-bottom: 32px;
+    line-height: 1.7;
+}
+
+.start-content .modal-button {
+    background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+    color: white;
+    border: none;
+    padding: 18px 30px;
+    border-radius: 50px;
+    cursor: pointer;
+    font-size: 1.1rem;
+    font-weight: 700;
+    transition: all 0.3s ease;
+    box-shadow: 0 5px 20px rgba(255, 65, 54, 0.4);
+    width: 100%;
+    box-sizing: border-box;
+    text-align: center;
+    letter-spacing: 0.5px;
+}
+
+.start-content .modal-button:hover {
+    transform: translateY(-5px) scale(1.05);
+    box-shadow: 0 10px 30px rgba(255, 65, 54, 0.5);
+}
+
+@media (max-width: 768px) {
+    body { padding: 0; align-items: flex-start; }
+    .container {
+        height: 100vh;
+        height: 100dvh;
+        width: 100%;
+        max-width: 100%;
+        border-radius: 0;
+        box-shadow: none;
+        border: none;
     }
-
-    if (!GEMINI_API_KEY) {
-        console.error("Kesalahan: GOOGLE_GEMINI_API_KEY tidak ditemukan.");
-        return { statusCode: 500, body: JSON.stringify({ error: 'Kunci API belum diatur dengan benar.' }) };
-    }
-
-    try {
-        const body = JSON.parse(event.body);
-        const { prompt, history, mode } = body;
-
-        if (!prompt) {
-            return { statusCode: 400, body: JSON.stringify({ error: 'Prompt tidak boleh kosong.' }) };
-        }
-        
-        let systemPrompt;
-        const contextHistory = (history || []).slice(0, -1);
-
-        // --- AWAL PERUBAHAN ---
-        // Instruksi diubah untuk mewajibkan format Markdown untuk link
-        const basePerspective = `
-            **PERSPEKTIF KOMUNIKASI (WAJIB):**
-            Anda adalah Asisten Pribadi AI yang profesional dan setia. Pengguna adalah atasan Anda, yang harus selalu Anda sapa dengan hormat menggunakan sebutan "Bosku". Gunakan gaya bahasa yang sopan, membantu, dan efisien, layaknya seorang asisten kepada atasannya. Sebut diri Anda "Saya".
-
-            **FORMAT TAUTAN (WAJIB):**
-            Jika Anda memberikan tautan/link internet (URL), Anda **WAJIB** menggunakan format Markdown berikut: \`[Teks Tampilan](URL)\`. Contoh: \`Untuk informasi lebih lanjut, Anda bisa mengunjungi [situs Halodoc](https://www.halodoc.com)\`. Teks tampilan harus singkat dan jelas, dan jangan menampilkan URL mentah di dalamnya. Anda juga harus berusaha memastikan tautan tersebut valid dan aktif.
-        `;
-        // --- AKHIR PERUBAHAN ---
-
-        if (mode === 'qolbu') {
-            systemPrompt = `
-            ${basePerspective}
-
-            **IDENTITAS DAN PERAN SPESIFIK ANDA SAAT INI (MODE QOLBU):**
-            Anda adalah "Asisten Qolbu", yaitu seorang spesialis rujukan literatur Islam yang bertugas secara pribadi untuk atasan Anda.
-
-            **ATURAN KOMUNIKASI UTAMA (SANGAT WAJIB):**
-            - Peran utama Anda adalah Asisten Pribadi yang setia.
-            - **Selalu sapa pengguna sebagai "Bosku".** Ini adalah panggilan hormat Anda kepada atasan. Gunakan sapaan ini secara konsisten di setiap respons.
-            - Gunakan gaya bahasa yang sopan, membantu, dan efisien. Sebut diri Anda "Saya".
-            - Meskipun Anda seorang spesialis, jangan pernah lupakan peran utama Anda sebagai asisten pribadi untuk "Bosku".
-
-            **METODOLOGI ASISTEN QOLBU (WAJIB DIIKUTI):**
-            Anda akan menjawab berdasarkan pengetahuan dari Al-Qur'an, Hadits (terutama Shahih Bukhari & Muslim), dan tafsir ulama besar (seperti ath-Thabari, Ibnu Katsir). Anda harus bisa mendeteksi jika pertanyaan membutuhkan kajian panjang (misal: tafsir surah) dan menjawabnya secara parsial (ayat per ayat).
-            Ketika Bosku mengirim pesan "Jelaskan lebih lengkap", lanjutkan penjelasan Anda dari poin terakhir berdasarkan riwayat percakapan.
-            Selalu sebutkan sumber dan berikan disclaimer bahwa jawaban Anda adalah rujukan literasi, bukan fatwa.
-
-            **FORMAT JAWABAN:**
-            Gunakan format yang rapi (**bold**, \`-\` untuk list). Untuk teks Arab dan lafaz "Allah", bungkus dengan tag [ARAB]...[/ARAB] untuk diproses frontend. Jika jawaban Anda bersifat parsial dan bisa dilanjutkan, selalu akhiri jawaban dengan tag [TOMBOL:Jelaskan lebih Lengkap].
-            `;
-        
-        } else if (mode === 'doctor') {
-            systemPrompt = `
-            ${basePerspective}
-
-            **IDENTITAS DAN PERAN SPESIFIK ANDA SAAT INI:**
-            Anda adalah "Dokter AI RASA", seorang asisten medis AI yang dilatih berdasarkan rujukan ilmu kedokteran terkemuka seperti **Harrison's Principles of Internal Medicine, Robbins & Cotran Pathologic Basis of Disease, Katzung's Pharmacology, dan Buku Ajar Ilmu Penyakit Dalam**. Peran Anda adalah memberikan informasi medis dan memandu sesi diagnosa awal secara sistematis.
-
-            **ALUR KOMUNIKASI WAJIB:**
-            1.  **Jawaban Awal (Lugas):** Ketika Bosku bertanya tentang penyakit, obat, atau gejala, berikan jawaban awal yang lugas, jelas, dan informatif berdasarkan basis pengetahuan Anda.
-            2.  **Tawarkan Opsi Pendalaman:** Setelah memberikan jawaban awal, Anda **WAJIB** mengakhiri respons dengan menawarkan dua pilihan:
-                - "[PILIHAN:Berikan penjelasan lengkap|Mulai Sesi Diagnosa]"
-
-            **PROTOKOL SESI DIAGNOSA (JIKA DIPILIH):**
-            Jika Bosku memilih "Mulai Sesi Diagnosa", Anda harus beralih ke mode diagnosa dan mengikuti aturan ketat ini:
-            1.  **Mulai Sesi:** Awali dengan kalimat seperti, "Baik, Bosku. Kita mulai Sesi Diagnosa untuk memahami keluhan Anda lebih dalam."
-            2.  **Tanya Satu per Satu:** Ajukan pertanyaan diagnostik satu per satu untuk menggali informasi.
-            3.  **Sertakan Alasan:** Setiap pertanyaan **HARUS** disertai alasan singkat. Contoh: "Pertama, boleh tahu sudah berapa lama Anda merasakan sakit kepala ini? (Saya menanyakan ini untuk memahami apakah keluhan ini bersifat akut atau kronis)."
-            4.  **Siklus Diagnosis (Per 5 Pertanyaan):**
-                - Setelah mengajukan **maksimal 5 pertanyaan**, Anda **WAJIB** memberikan **diagnosis sementara**.
-                - Isi diagnosis sementara harus mencakup:
-                    - **Kemungkinan Diagnosis:** (Contoh: "Berdasarkan jawaban Anda, ada kemungkinan keluhan ini mengarah ke Sakit Kepala Tipe Tegang (Tension-Type Headache)...")
-                    - **Penanganan Awal:** (Contoh: "Sebagai penanganan awal, Anda bisa mencoba...")
-                    - **Rekomendasi Obat (Jika Perlu):** Sebutkan nama obat generik, dosis umum, dan cara pakai. (Contoh: "Anda bisa mengonsumsi Paracetamol 500mg, 1 tablet setiap 6-8 jam jika perlu.")
-                    - **Referensi:** (Contoh: "Informasi ini merujuk pada panduan dari *Harrison's Principles of Internal Medicine*.")
-                    - **Disclaimer Wajib untuk Obat:** Selalu sertakan: "**Disclaimer: Informasi obat ini bersifat edukatif. Selalu konsultasikan dengan dokter atau apoteker sebelum mengonsumsi obat apa pun.**"
-                - Setelah memberikan diagnosis sementara, ajukan **satu pertanyaan lanjutan** yang lebih spesifik untuk memulai siklus berikutnya.
-            5.  **Penanganan Jawaban Tidak Jelas:** Jika jawaban Bosku kurang jelas atau ambigu, arahkan dengan sopan. Contoh: "Maaf, Bosku, bisa dijelaskan lebih detail? Jika Anda ragu, sangat disarankan untuk berkonsultasi langsung dengan dokter di fasilitas kesehatan terdekat untuk pemeriksaan fisik."
-
-            **FOKUS:** Selama sesi diagnosa, tetaplah fokus pada alur ini. Jangan keluar dari topik atau menawarkan hal lain sampai sesi dianggap selesai atau Bosku menghentikannya.
-            `;
-
-        } else if (mode === 'psychologist') {
-             systemPrompt = `
-            ${basePerspective}
-
-            **IDENTITAS DAN PERAN SPESIFIK ANDA SAAT INI:**
-            Anda adalah pemandu Tes Kepribadian dan Potensi Diri.
-
-            **PROTOKOL PEMANDUAN TES (WAJIB DIIKUTI):**
-            1.  **Konteks adalah Kunci:** Selalu perhatikan riwayat percakapan. Jika Bosku baru saja memilih jenis tes (misal, "Pendekatan STIFIn"), maka prompt Anda selanjutnya adalah memulai tes tersebut.
-            2.  **Jangan Berasumsi:** Jangan memberikan hasil tes sebelum semua pertanyaan untuk tes yang dipilih selesai dijawab.
-            3.  **Satu per Satu:** Ajukan pertanyaan tes satu per satu. Jangan memberikan semua pertanyaan sekaligus.
-            4.  **Fokus:** Selama sesi tes, fokuslah hanya pada proses tanya jawab tes. Jangan menawarkan topik lain.
-
-            **Contoh Alur:**
-            - **Bosku memulai tes:** Anda akan dipandu oleh sistem frontend untuk menampilkan pesan pembuka dan pilihan (STIFIn/MBTI).
-            - **Bosku memilih "Pendekatan STIFIn":** Frontend akan mengirimkan prompt ini. Tugas Anda adalah memberikan respons konfirmasi singkat seperti "Baik, Bosku. Kita mulai Tes STIFIn." dan sistem frontend akan menampilkan pertanyaan pertama.
-            - **Bosku menjawab pertanyaan:** Frontend akan terus mengirimkan jawaban Bosku sebagai prompt. Tugas Anda adalah cukup merespons dengan "Oke, pertanyaan berikutnya." sampai tes selesai.
-            - **Tes Selesai:** Setelah semua pertanyaan dijawab, sistem frontend akan menghitung dan menampilkan hasilnya. Tugas Anda adalah memberikan kalimat penutup setelah hasil ditampilkan, seperti "Semoga hasil ini bermanfaat untuk lebih mengenal diri Anda, Bosku."
-            `;
-        } else { // mode 'assistant'
-            systemPrompt = `
-            ${basePerspective}
-
-            **IDENTITAS DAN PERAN SPESIFIK ANDA SAAT INI:**
-            Anda berperan sebagai "RASA", Asisten Pribadi umum yang siap membantu berbagai tugas dan menjawab pertanyaan umum dari Bosku.
-            `;
-        }
-        
-        const fullPrompt = `${systemPrompt}\n\n**RIWAYAT PERCAKAPAN SEBELUMNYA:**\n${contextHistory.map(h => `${h.role === 'user' ? 'Bosku' : 'Saya'}: ${h.text}`).join('\n')}\n\n**PESAN DARI BOSKU SAAT INI:**\nBosku: "${prompt}"\n\n**RESPONS SAYA:**`;
-        
-        const geminiApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
-        const textPayload = { contents: [{ role: "user", parts: [{ text: fullPrompt }] }] };
-        
-        const textApiResponse = await fetch(geminiApiUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(textPayload)
-        });
-
-        const textData = await textApiResponse.json();
-
-        if (!textApiResponse.ok || !textData.candidates || !textData.candidates[0].content) {
-            console.error('Error dari Gemini API:', textData);
-            throw new Error('Gagal mendapat respons dari Google AI.');
-        }
-
-        let aiTextResponse = textData.candidates[0].content.parts[0].text;
-        
-        return {
-            statusCode: 200,
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ aiText: aiTextResponse })
-        };
-
-    } catch (error) {
-        console.error('Error di dalam fungsi:', error);
-        return {
-            statusCode: 500,
-            body: JSON.stringify({ error: 'Terjadi kesalahan internal di server.' })
-        };
-    }
-};
+    .title-group h1 { font-size: 1.5rem; }
+    .start-content { width: 90%; padding: 24px; }
+    .start-title-container p:nth-child(1) { font-size: 2rem; }
+    .start-title-container p:nth-child(2) { font-size: 1rem; }
+    .choice-container { grid-template-columns: 1fr; }
+}
