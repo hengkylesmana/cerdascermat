@@ -13,14 +13,63 @@
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet">
     
     <link rel="stylesheet" href="style.css">
+    <style>
+        /* PENYEMPURNAAN: Style untuk layar pembuka dan menyembunyikan game layout awal */
+        #start-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, var(--light-bg) 0%, #D6EFFF 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            text-align: center;
+        }
+
+        .start-content {
+            animation: popUp 0.6s cubic-bezier(0.165, 0.84, 0.44, 1) forwards;
+        }
+
+        #start-game-btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 20px 40px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 1.5rem;
+            font-weight: 700;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 20px rgba(0,123,255,0.2);
+        }
+
+        #start-game-btn:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,123,255,0.4);
+        }
+
+        #game-layout {
+            display: none; /* Game disembunyikan pada awalnya */
+        }
+    </style>
 </head>
 <body>
     <div id="interactive-bg"></div>
 
-    <!-- 
-      PERUBAHAN: Modal atau layar pembuka telah dihapus sepenuhnya 
-      untuk menyederhanakan alur dan memastikan game langsung berjalan.
-    -->
+    <!-- PENYEMPURNAAN: Layar pembuka dengan tombol "Mulai Permainan" dikembalikan -->
+    <div id="start-screen">
+        <div class="start-content">
+            <div class="start-title-container">
+                <p style="font-size: 3rem;">HAFIZH GAMES</p>
+                <p style="font-size: 1.5rem;">Mempersembahkan</p>
+                <h1 style="font-size: 2.5rem; color: var(--primary-color); margin: 20px 0;">SIAPA MAU JADI DERMAWAN</h1>
+            </div>
+            <button id="start-game-btn">Mulai Permainan</button>
+        </div>
+    </div>
 
     <!-- Tata Letak Utama Game -->
     <div id="game-layout">
