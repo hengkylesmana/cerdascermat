@@ -1,7 +1,7 @@
 /*
   HAFIZH GAMES - style.css
-  Versi: 2.0
-  Deskripsi: Desain ulang dengan tema terang, papan skor, dan peningkatan responsivitas.
+  Versi: 2.1
+  Deskripsi: Desain ulang dengan tema terang, papan skor vertikal, dan peningkatan responsivitas.
 */
 
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap');
@@ -210,6 +210,7 @@ header {
     display: flex;
     flex-direction: column-reverse; /* Hadiah tertinggi di atas */
     flex-grow: 1;
+    overflow-y: auto;
 }
 .prize-tier {
     padding: 10px 15px;
@@ -219,6 +220,7 @@ header {
     transition: all 0.3s ease;
     text-align: right;
     border: 2px solid transparent;
+    font-size: 0.9rem;
 }
 .prize-tier.current {
     background-color: var(--secondary-color);
@@ -270,54 +272,47 @@ header {
     #game-layout {
         flex-direction: column;
         height: auto;
-        max-height: none;
+        padding: 0;
+        gap: 0;
+    }
+    body {
+        padding: 0;
     }
     .container {
         order: 2; /* Game di bawah papan skor */
         height: auto;
+        border-radius: 0;
+        border-bottom: none;
+        border-top: none;
     }
     .scoreboard-container {
         order: 1; /* Papan skor di atas */
         width: 100%;
         box-sizing: border-box;
         height: auto;
-        max-height: 250px; /* Batasi tinggi papan skor */
+        border-radius: 0;
+        border-bottom: 1px solid var(--border-color);
     }
+    /* Mengubah papan skor menjadi horizontal scroll di mobile */
     .prize-list {
-        flex-direction: row; /* Papan skor jadi horizontal */
+        flex-direction: row;
         overflow-x: auto;
         padding-bottom: 10px;
+        scrollbar-width: thin;
     }
     .prize-tier {
-        flex: 0 0 120px; /* Lebar setiap item hadiah */
+        flex: 0 0 130px; /* Lebar setiap item hadiah */
         margin-right: 10px;
         text-align: center;
-        writing-mode: vertical-rl; /* Teks vertikal */
-        transform: rotate(180deg);
-        padding: 15px 5px;
-    }
-    .prize-tier.current {
-        transform: scale(1.05) rotate(180deg);
+        font-size: 0.8rem;
     }
 }
 
 @media (max-width: 768px) {
-    body { padding: 0; }
-    #game-layout {
-        gap: 0;
-    }
-    .container, .scoreboard-container {
-        border-radius: 0;
-        border-left: none;
-        border-right: none;
-    }
-    .scoreboard-container {
-        border-top: none;
-    }
-    .container {
-        border-bottom: none;
-    }
     .choice-container {
         grid-template-columns: 1fr;
+    }
+    .prize-tier {
+         flex: 0 0 110px;
     }
 }
