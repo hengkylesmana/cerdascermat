@@ -1,11 +1,11 @@
 {
-  "name": "RASA - Asisten Pribadi AI",
-  "short_name": "RASA",
-  "description": "Namaku RASA (Ruang Asuh Sadar Asa) - Asisten Pribadi Berbasis AI Terlatih Khusus.",
+  "name": "Hafizh Games - Siapa Mau Jadi Dermawan",
+  "short_name": "Hafizh Games",
+  "description": "Hafizh Games - Bermain Menjadi Hebat! Jawab pertanyaan dan menangkan hadiah 1 Miliar.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f0f4f8",
-  "theme_color": "#4338ca",
+  "background_color": "#F0F8FF",
+  "theme_color": "#007BFF",
   "icons": [
     {
       "src": "/icons/icon-192x192.png",
