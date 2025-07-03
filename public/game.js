@@ -1,7 +1,7 @@
 /**
  * HAFIZH GAMES - game.js
- * Versi: 2.1
- * Deskripsi: Logika frontend yang disempurnakan dengan tombol mulai yang andal dan host yang lebih bersemangat.
+ * Versi: 2.2
+ * Deskripsi: Logika frontend yang disempurnakan dengan tombol mulai yang andal, host yang lebih bersemangat, dan hook pembuka yang dramatis.
  */
 document.addEventListener('DOMContentLoaded', () => {
     // Elemen DOM
@@ -59,9 +59,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // Fungsi untuk berbicara (Text-to-Speech)
-    function speak(text, force) {
-        if (!audioReady) return;
-        if (!('speechSynthesis' in window)) return;
+    function speak(text) {
+        if (!audioReady || !('speechSynthesis' in window)) return;
         window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(text.replace(/<[^>]*>/g, ''));
         utterance.lang = 'id-ID';
@@ -89,14 +88,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function initializeGame() {
-        // PERBAIKAN: Memastikan audio context dimulai oleh interaksi pengguna
+        // Guard untuk mencegah klik ganda
+        if (gameState.isPlaying) return;
+        
+        // PERBAIKAN: Logika inisialisasi audio yang lebih andal
         if (!audioReady) {
-            await Tone.start();
-            setupAudio();
+            try {
+                await Tone.start();
+                setupAudio();
+            } catch (e) {
+                console.error("Audio context gagal dimulai:", e);
+                // Game tetap bisa berjalan tanpa audio
+            }
         }
         
         if (!audioReady) {
-            alert("Gagal memuat komponen audio. Permainan akan berjalan tanpa suara.");
+            statusDiv.textContent = "Gagal memuat audio, game berjalan tanpa suara.";
         } else {
             sounds.start.start();
         }
@@ -105,13 +112,16 @@ document.addEventListener('DOMContentLoaded', () => {
         
         gameState = { level: 0, currentQuestion: null, isGameOver: false, isPlaying: true };
         
-        // HOOK PEMBUKA BARU
-        const welcomeMessage = "BERSIAP-SIAP! Inilah dia... <strong>SIAPA MAU JADI DERMAWAN!</strong> Saya, Bang Hafizh, akan memandu Anda menuju 1 Miliar! AYO KITA MULAI!!";
-        speak("Bersiap-siap! Inilah dia... SIAPA MAU JADI DERMAWAN! Saya, Bang Hafizh, akan memandu Anda menuju 1 Miliar! AYO KITA MULAI!!");
+        // HOOK PEMBUKA BARU YANG LEBIH SEMANGAT
+        const welcomeText = "DARI STUDIO HAFIZH GAMES! INILAH DIA... <strong>SIAPA MAU JADI DERMAWAN!</strong> Saya, Bang Hafizh, siap memandu Anda merebut 1 Miliar! APA ANDA SUDAH SIAP?! AYO KITA MULAI!!";
+        displayMessageAsHost(welcomeText);
+        speak("Dari studio Hafizh Games! Inilah dia... SIAPA MAU JADI DERMAWAN! Saya, Bang Hafizh, siap memandu Anda merebut 1 Miliar! Apa anda sudah siap?! Ayo kita mulai!!");
         
         updateHeader();
         updatePrizeLadderUI();
-        fetchNextQuestion();
+        
+        // Beri jeda agar musik dan sapaan terdengar sebelum pertanyaan pertama
+        setTimeout(fetchNextQuestion, 4000);
     }
     
     async function fetchNextQuestion() {
@@ -230,12 +240,13 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error(error);
             // KARAKTER HOST LEBIH SEMANGAT
-            return isCorrect ? "LUAR BIASA!! TEPAT SEKALI! LANJUTKAN KE LEVEL BERIKUTNYA, JUARA!" : "YAAAHHH, SAYANG SEKALI! Bukan itu jawabannya. TAPI JANGAN MENYERAH!";
+            return isCorrect ? "DAHSYAT! BENAR SEKALI! LANJUTKAN KE LEVEL BERIKUTNYA, JUARA!" : "WADUH, BELUM TEPAT! TAPI SEMANGAT JANGAN KENDOR, AYO BISA!";
         }
     }
     
     function displayMessageAsHost(message) {
-        statusDiv.textContent = `Bang Hafizh: ${message.replace(/<[^>]*>/g, '')}`;
+        // Fungsi ini sekarang menampilkan pesan di area utama, bukan di status bar
+        chatContainer.innerHTML = `<div class="ai-system-message">${message}</div>`;
     }
 
     function displayGameOver(isWinner) {
