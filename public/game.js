@@ -1,8 +1,8 @@
 /**
  * HAFIZH GAMES - game.js
- * Versi: 6.0
- * Deskripsi: PERBAIKAN KETAHANAN - Menambahkan penanganan error dan timeout pada saat fetch pertanyaan
- * untuk mencegah game macet secara permanen jika server/API gagal merespons.
+ * Versi: 7.0
+ * Deskripsi: PERBAIKAN FINAL - Menghilangkan musik dan pesan pembuka.
+ * Game langsung memuat pertanyaan pertama setelah tombol "Mulai" ditekan untuk keandalan maksimum.
  */
 document.addEventListener('DOMContentLoaded', () => {
     // Elemen DOM
@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let gameState = {
         level: 0,
         currentQuestion: null,
-        isGameOver: true,
+        isGameOver: false,
         isPlaying: false,
     };
 
@@ -41,7 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (audioReady) return;
         try {
             sounds = {
-                start: new Tone.Player("https://firebasestorage.googleapis.com/v0/b/rasa-426813.appspot.com/o/start.mp3?alt=media&token=35a2d5c4-5e84-473d-862d-864023c7c4b6").toDestination(),
+                // Musik start tidak lagi digunakan di awal
                 correct: new Tone.Player("https://firebasestorage.googleapis.com/v0/b/rasa-426813.appspot.com/o/correct.mp3?alt=media&token=404f2a11-5e20-411a-b054-325b51a84f50").toDestination(),
                 wrong: new Tone.Player("https://firebasestorage.googleapis.com/v0/b/rasa-426813.appspot.com/o/wrong.mp3?alt=media&token=3852899a-3286-4448-a0b4-7b44383a54d4").toDestination(),
                 wait: new Tone.Synth({ oscillator: { type: "sine" }, envelope: { attack: 0.005, decay: 0.1, sustain: 0.3, release: 1 } }).toDestination()
@@ -79,36 +79,33 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // PERUBAHAN: Alur disederhanakan
     async function initializeGame() {
         startGameBtn.disabled = true;
         startGameBtn.textContent = "Memuat...";
+        
+        // Tetap mencoba mengaktifkan audio untuk efek suara nanti
         try {
             await Tone.start();
             setupAudio();
         } catch (e) {
             console.error("Gagal memulai konteks audio:", e);
         }
+
+        // Sembunyikan layar pembuka dan tampilkan game
         startScreen.style.display = 'none';
         gameLayout.style.display = 'flex';
-        startGame();
-    }
-
-    function startGame() {
-        if (gameState.isPlaying && !gameState.isGameOver) return;
+        
+        // Reset state dan langsung panggil pertanyaan pertama
         gameState = { level: 0, currentQuestion: null, isGameOver: false, isPlaying: true };
-        const welcomeText = "DARI STUDIO HAFIZH GAMES! INILAH DIA... <strong>SIAPA MAU JADI DERMAWAN!</strong> Saya, Bang Hafizh, siap memandu Anda merebut 1 Miliar! APA ANDA SUDAH SIAP?! AYO KITA MULAI!!";
-        displayMessageAsHost(welcomeText);
-        if (audioReady) sounds.start.start();
-        speak(welcomeText);
-        setTimeout(fetchNextQuestion, 6000);
         updateHeader();
         updatePrizeLadderUI();
+        fetchNextQuestion(); // Langsung ke pertanyaan
     }
     
-    // PENYEMPURNAAN: Fungsi untuk menampilkan pesan error di UI
     function displayError(message) {
-        chatContainer.innerHTML = ''; // Bersihkan kontainer
-        statusDiv.textContent = ""; // Hapus status loading
+        chatContainer.innerHTML = '';
+        statusDiv.textContent = "";
         const errorBox = `
             <div class="question-box">
                 <div class="question-text" style="color: var(--incorrect-answer);">Oops, Terjadi Masalah!</div>
@@ -128,24 +125,20 @@ document.addEventListener('DOMContentLoaded', () => {
         statusDiv.textContent = "Bang Hafizh lagi siapin pertanyaan...";
         if (audioReady) sounds.wait.triggerAttackRelease("C4", "8n");
 
-        // PENYEMPURNAAN: Menambahkan AbortController untuk timeout
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => {
-            controller.abort();
-        }, 15000); // Timeout 15 detik
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
 
         try {
             const response = await fetch('/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ action: 'GET_QUESTION', payload: { level: gameState.level + 1 } }),
-                signal: controller.signal // Menghubungkan controller ke fetch
+                signal: controller.signal
             });
 
-            clearTimeout(timeoutId); // Batalkan timeout jika fetch berhasil
+            clearTimeout(timeoutId);
 
             if (!response.ok) {
-                // Throw error jika respons server tidak 200 OK
                 throw new Error(`Server merespons dengan status ${response.status}`);
             }
             
@@ -158,7 +151,7 @@ document.addEventListener('DOMContentLoaded', () => {
             speak(`Pertanyaan untuk ${prizeText}. ${questionText}`);
 
         } catch (error) {
-            clearTimeout(timeoutId); // Pastikan timeout juga dibatalkan saat ada error lain
+            clearTimeout(timeoutId);
             console.error("Fetch Gagal:", error);
             if (error.name === 'AbortError') {
                 displayError("Bang Hafizh tidak merespons. Mungkin dia sedang sibuk. Silakan coba lagi.");
