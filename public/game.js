@@ -1,9 +1,8 @@
 /**
  * HAFIZH GAMES - game.js
- * Versi: 12.4
- * Deskripsi: PENYEMPURNAAN FITUR - Menambahkan sambutan host & komentar jawaban non-blocking.
- * - Mengambil dan menyuarakan sambutan host saat game dimulai.
- * - Mengambil dan menyuarakan komentar host untuk setiap jawaban tanpa membuat game macet.
+ * Versi: 12.5
+ * Deskripsi: PENYEMPURNAAN FITUR - Menambahkan histori pertanyaan untuk variasi soal.
+ * - Mengirim histori pertanyaan ke backend agar tidak ada soal yang berulang.
  */
 document.addEventListener('DOMContentLoaded', () => {
     // Elemen DOM
@@ -37,7 +36,8 @@ document.addEventListener('DOMContentLoaded', () => {
         currentQuestion: null,
         isGameOver: false,
         isPlaying: false,
-        selectedAnswerIndex: null, // Menyimpan jawaban yang dipilih pemain
+        selectedAnswerIndex: null,
+        questionHistory: [], // PENAMBAHAN: Menyimpan histori pertanyaan
     };
 
     function speak(text, onEndCallback = () => {}) {
@@ -54,7 +54,6 @@ document.addEventListener('DOMContentLoaded', () => {
         window.speechSynthesis.speak(utterance);
     }
 
-    // FITUR BARU: Mengambil sambutan pembuka dari backend
     async function fetchOpeningSpeech() {
         try {
             const response = await fetch('/api/chat', {
@@ -73,20 +72,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function init() {
         populatePrizeList();
-        fetchOpeningSpeech(); // Memuat sambutan saat halaman pertama kali dibuka
+        fetchOpeningSpeech();
         
         startGameBtn.addEventListener('click', async () => {
             startGameBtn.disabled = true;
             startGameBtn.textContent = "Memuat...";
             try {
-                // Memulai audio context, diperlukan untuk suara di browser
                 await Tone.start();
                 console.log("AudioContext berhasil dimulai oleh pengguna.");
             } catch (e) {
                 console.error("Gagal memulai AudioContext:", e);
             }
             
-            // Menyuarakn sambutan, lalu memulai game setelah selesai
             speak(hostWelcomeSpeech.textContent, () => {
                 initializeGame();
             });
@@ -108,7 +105,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function initializeGame() {
         startScreen.style.display = 'none';
         gameLayout.style.display = 'flex';
-        gameState = { level: 0, currentQuestion: null, isGameOver: false, isPlaying: true, selectedAnswerIndex: null };
+        // Reset state termasuk histori
+        gameState = { level: 0, currentQuestion: null, isGameOver: false, isPlaying: true, selectedAnswerIndex: null, questionHistory: [] };
         updateHeader();
         updatePrizeLadderUI();
         fetchNextQuestion();
@@ -141,13 +139,23 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch('/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'GET_QUESTION', payload: { level: gameState.level + 1 } }),
+                // PENAMBAHAN: Mengirim level dan histori pertanyaan
+                body: JSON.stringify({ 
+                    action: 'GET_QUESTION', 
+                    payload: { 
+                        level: gameState.level + 1,
+                        history: gameState.questionHistory 
+                    } 
+                }),
                 signal: controller.signal
             });
             clearTimeout(timeoutId);
             if (!response.ok) throw new Error(`Server merespons dengan status ${response.status}`);
             
             gameState.currentQuestion = await response.json();
+            // PENAMBAHAN: Simpan pertanyaan baru ke histori
+            gameState.questionHistory.push(gameState.currentQuestion.question);
+
             statusDiv.textContent = "";
             displayQuestion(gameState.currentQuestion);
             
@@ -186,13 +194,9 @@ document.addEventListener('DOMContentLoaded', () => {
         chatContainer.appendChild(messageElement);
     }
 
-    // FITUR BARU: Mengambil komentar host secara non-blocking
     async function getAndSpeakHostCommentary(isCorrect) {
         try {
             const payload = {
-                question: gameState.currentQuestion.question,
-                userAnswer: gameState.currentQuestion.options[gameState.selectedAnswerIndex],
-                correctAnswer: gameState.currentQuestion.options[gameState.currentQuestion.correct_answer_index],
                 isCorrect: isCorrect
             };
 
@@ -201,13 +205,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ action: 'GET_HOST_COMMENTARY', payload })
             });
-            if (!response.ok) return; // Gagal diam-diam jika ada masalah
+            if (!response.ok) return;
             const data = await response.json();
-            statusDiv.textContent = data.commentary; // Update status dengan komentar host
+            statusDiv.textContent = data.commentary;
             speak(data.commentary);
         } catch (error) {
             console.error("Gagal mengambil komentar host:", error);
-            // Jika gagal, kembalikan ke teks default
             statusDiv.textContent = isCorrect ? "BENAR! Jawaban Anda tepat sekali!" : "SALAH! Permainan berakhir.";
         }
     }
@@ -217,11 +220,10 @@ document.addEventListener('DOMContentLoaded', () => {
         selectedButton.classList.add('selected');
         
         const selectedIndex = parseInt(selectedButton.dataset.index);
-        gameState.selectedAnswerIndex = selectedIndex; // Simpan jawaban pemain
+        gameState.selectedAnswerIndex = selectedIndex;
         const correctIndex = gameState.currentQuestion.correct_answer_index;
         const isCorrect = selectedIndex === correctIndex;
 
-        // Beri feedback visual instan
         statusDiv.textContent = "Memeriksa jawaban...";
         await delay(1500);
         
@@ -229,13 +231,12 @@ document.addEventListener('DOMContentLoaded', () => {
         selectedButton.classList.remove('selected');
         correctButton.classList.add('correct');
 
-        // Panggil komentar host di latar belakang (tanpa 'await' agar tidak memblokir)
         getAndSpeakHostCommentary(isCorrect);
 
         if (isCorrect) {
             confetti({ particleCount: 150, spread: 90, origin: { y: 0.6 } });
             
-            await delay(1000); // Beri jeda sedikit agar pemain bisa melihat hasilnya
+            await delay(1000);
 
             if (gameState.level === prizeTiers.length - 1) {
                 await delay(2000);
