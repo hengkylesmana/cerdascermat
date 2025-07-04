@@ -1,9 +1,9 @@
 /**
  * HAFIZH GAMES - game.js
- * Versi: 12.0
- * Deskripsi: PERBAIKAN FINAL - Mengimplementasikan mekanisme "Lanjutkan" dengan tombol.
- * Setelah jawaban benar, pemain harus mengklik tombol untuk ke soal berikutnya,
- * menghilangkan semua proses menunggu otomatis yang tidak andal.
+ * Versi: 12.1
+ * Deskripsi: PERBAIKAN KRITIS - Mengatasi masalah AudioContext dan error loading suara.
+ * - Memastikan AudioContext dimulai HANYA setelah klik pengguna.
+ * - Membuat game tetap berjalan meskipun file suara gagal dimuat (error 404).
  */
 document.addEventListener('DOMContentLoaded', () => {
     // Elemen DOM
@@ -41,17 +41,26 @@ document.addEventListener('DOMContentLoaded', () => {
     let sounds;
     let audioReady = false;
 
+    // PERBAIKAN: Fungsi setupAudio dibuat lebih tangguh
     function setupAudio() {
-        if (audioReady) return;
         try {
+            // URL file suara perlu diperbaiki jika masih 404
             sounds = {
                 correct: new Tone.Player("https://firebasestorage.googleapis.com/v0/b/rasa-426813.appspot.com/o/correct.mp3?alt=media&token=404f2a11-5e20-411a-b054-325b51a84f50").toDestination(),
                 wrong: new Tone.Player("https://firebasestorage.googleapis.com/v0/b/rasa-426813.appspot.com/o/wrong.mp3?alt=media&token=3852899a-3286-4448-a0b4-7b44383a54d4").toDestination(),
                 wait: new Tone.Synth({ oscillator: { type: "sine" }, envelope: { attack: 0.005, decay: 0.1, sustain: 0.3, release: 1 } }).toDestination()
             };
-            audioReady = true;
+            // Cek apakah buffer suara berhasil dimuat
+            Promise.all([sounds.correct.loaded, sounds.wrong.loaded]).then(() => {
+                console.log("File suara berhasil dimuat.");
+                audioReady = true;
+            }).catch(() => {
+                console.warn("Gagal memuat file suara (mungkin karena error 404). Game akan berjalan tanpa efek suara.");
+                audioReady = false; // Pastikan audioReady false jika gagal
+            });
         } catch (e) {
-            console.error("Gagal memuat file audio:", e);
+            console.error("Gagal menginisialisasi Tone.js:", e);
+            audioReady = false;
         }
     }
     
@@ -67,7 +76,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function init() {
         populatePrizeList();
-        startGameBtn.addEventListener('click', initializeGame);
+        // PERBAIKAN: Event listener dipisahkan untuk kejelasan
+        startGameBtn.addEventListener('click', async () => {
+            // PERBAIKAN KRITIS: Tone.start() dipanggil TEPAT di dalam event click
+            try {
+                await Tone.start();
+                console.log("AudioContext berhasil dimulai oleh pengguna.");
+            } catch (e) {
+                console.error("Gagal memulai AudioContext:", e);
+            }
+            // Lanjutkan dengan memulai game
+            initializeGame();
+        });
     }
 
     function populatePrizeList() {
@@ -82,15 +102,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    async function initializeGame() {
+    function initializeGame() {
         startGameBtn.disabled = true;
         startGameBtn.textContent = "Memuat...";
-        try {
-            await Tone.start();
-            setupAudio();
-        } catch (e) {
-            console.error("Gagal memulai konteks audio:", e);
-        }
+        
+        setupAudio(); // Setup audio, tapi tidak memblokir game jika gagal
+        
         startScreen.style.display = 'none';
         gameLayout.style.display = 'flex';
         gameState = { level: 0, currentQuestion: null, isGameOver: false, isPlaying: true };
@@ -118,7 +135,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (gameState.isGameOver) return;
         chatContainer.innerHTML = '';
         statusDiv.textContent = "Bang Hafizh lagi siapin pertanyaan...";
-        if (audioReady) sounds.wait.triggerAttackRelease("C4", "8n");
+        // PERBAIKAN: Hanya mainkan suara jika audio siap
+        if (audioReady && sounds && sounds.wait) {
+            sounds.wait.triggerAttackRelease("C4", "8n");
+        }
 
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 15000);
@@ -172,41 +192,37 @@ document.addEventListener('DOMContentLoaded', () => {
         chatContainer.appendChild(messageElement);
     }
 
-    // PERBAIKAN ALUR UTAMA
     async function handleAnswer(selectedButton) {
-        // 1. Kunci semua pilihan
         document.querySelectorAll('.choice-button').forEach(btn => btn.disabled = true);
         selectedButton.classList.add('selected');
         statusDiv.textContent = "Memeriksa jawaban...";
         await delay(2000);
 
-        // 2. Tentukan benar atau salah
         const selectedIndex = parseInt(selectedButton.dataset.index);
         const correctIndex = gameState.currentQuestion.correct_answer_index;
         const isCorrect = selectedIndex === correctIndex;
 
-        // 3. Tampilkan hasilnya secara visual
         const correctButton = document.querySelector(`.choice-button[data-index='${correctIndex}']`);
         selectedButton.classList.remove('selected');
         correctButton.classList.add('correct');
 
         if (isCorrect) {
-            if (audioReady) sounds.correct.start();
+            // PERBAIKAN: Hanya mainkan suara jika audio siap
+            if (audioReady && sounds && sounds.correct) sounds.correct.start();
             confetti({ particleCount: 150, spread: 90, origin: { y: 0.6 } });
             statusDiv.textContent = "BENAR! Jawaban Anda tepat sekali!";
             speak("Benar!");
 
-            // 4. Jika benar, cek apakah ini level terakhir atau tampilkan tombol LANJUTKAN
             if (gameState.level === prizeTiers.length - 1) {
                 await delay(2000);
                 displayGameOver(true);
             } else {
-                // Tampilkan tombol Lanjutkan
                 displayContinueButton();
             }
         } else {
             selectedButton.classList.add('incorrect');
-            if (audioReady) sounds.wrong.start();
+            // PERBAIKAN: Hanya mainkan suara jika audio siap
+            if (audioReady && sounds && sounds.wrong) sounds.wrong.start();
             statusDiv.textContent = "SALAH! Permainan berakhir.";
             speak("Salah!");
             await delay(2000);
@@ -214,21 +230,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    // FUNGSI BARU DAN ANDAL UNTUK MELANJUTKAN GAME
     function displayContinueButton() {
         const questionBox = chatContainer.querySelector('.question-box');
-        if (!questionBox) return; // Pengaman jika kotak pertanyaan tidak ada
+        if (!questionBox) return;
 
         const continueButton = document.createElement('button');
         continueButton.textContent = 'LANJUTKAN';
-        continueButton.className = 'choice-button'; // Memakai style yang sama
+        continueButton.className = 'choice-button';
         continueButton.style.marginTop = '20px';
-        continueButton.style.gridColumn = '1 / -1'; // Agar membentang penuh
-        continueButton.style.backgroundColor = 'var(--correct-answer)'; // Warna hijau
+        continueButton.style.gridColumn = '1 / -1';
+        continueButton.style.backgroundColor = 'var(--correct-answer)';
         continueButton.style.color = 'white';
 
         continueButton.onclick = () => {
-            // Aksi saat tombol "LANJUTKAN" diklik
             gameState.level++;
             updateHeader();
             updatePrizeLadderUI();
@@ -236,13 +250,6 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         questionBox.appendChild(continueButton);
-    }
-
-    // Fungsi getHostCommentary tidak lagi dipanggil di alur utama untuk mencegah macet
-    // Namun tetap ada jika diperlukan untuk fitur lain.
-    async function getHostCommentary(isCorrect) {
-        // ... (kode ini tidak berubah, tapi tidak lagi memblokir permainan)
-        return isCorrect ? "TEPAT SEKALI! LUAR BIASA! LANJUT!" : "YAAH, SAYANG SEKALI BUKAN ITU JAWABANNYA.";
     }
 
     function displayGameOver(isWinner) {
