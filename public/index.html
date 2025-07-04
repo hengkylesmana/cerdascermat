@@ -14,7 +14,6 @@
     
     <link rel="stylesheet" href="style.css">
     <style>
-        /* PENYEMPURNAAN: Style untuk layar pembuka dan menyembunyikan game layout awal */
         #start-screen {
             position: fixed;
             top: 0;
@@ -27,10 +26,23 @@
             align-items: center;
             z-index: 2000;
             text-align: center;
+            padding: 20px;
+            box-sizing: border-box;
         }
 
         .start-content {
             animation: popUp 0.6s cubic-bezier(0.165, 0.84, 0.44, 1) forwards;
+            max-width: 600px;
+        }
+        
+        /* PENAMBAHAN: Style untuk sambutan host */
+        #host-welcome-speech {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin: 30px 0;
+            min-height: 50px; /* Memberi ruang agar tidak lompat saat teks dimuat */
+            line-height: 1.6;
         }
 
         #start-game-btn {
@@ -59,7 +71,6 @@
 <body>
     <div id="interactive-bg"></div>
 
-    <!-- PENYEMPURNAAN: Layar pembuka dengan tombol "Mulai Permainan" dikembalikan -->
     <div id="start-screen">
         <div class="start-content">
             <div class="start-title-container">
@@ -67,6 +78,10 @@
                 <p style="font-size: 1.5rem;">Mempersembahkan</p>
                 <h1 style="font-size: 2.5rem; color: var(--primary-color); margin: 20px 0;">SIAPA MAU JADI DERMAWAN</h1>
             </div>
+            
+            <!-- PENAMBAHAN: Elemen untuk menampilkan sambutan host -->
+            <p id="host-welcome-speech">Bang Hafizh sedang bersiap-siap...</p>
+
             <button id="start-game-btn">Mulai Permainan</button>
         </div>
     </div>
