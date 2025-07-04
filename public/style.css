@@ -1,7 +1,7 @@
 /*
   HAFIZH GAMES - style.css
-  Versi: 2.2
-  Deskripsi: Desain ulang dengan papan skor vertikal yang lebih baik dan responsif.
+  Versi: 2.3
+  Deskripsi: Penambahan desain responsif untuk mobile & tombol bantuan.
 */
 
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap');
@@ -15,6 +15,7 @@
     --text-light: #FFFFFF;
     --correct-answer: #28A745; /* Hijau Sukses */
     --incorrect-answer: #DC3545; /* Merah Gagal */
+    --disabled-color: #6c757d; /* Abu-abu */
     --shadow: 0 10px 30px rgba(0, 123, 255, 0.15);
     --border-color: #DEE2E6;
 }
@@ -33,7 +34,7 @@ body {
     color: var(--text-dark);
     padding: 10px;
     box-sizing: border-box;
-    overflow: hidden;
+    overflow-x: hidden; /* Mencegah scroll horizontal */
 }
 
 #game-layout {
@@ -71,6 +72,40 @@ header {
     text-align: center;
     background-color: #fff;
     flex-shrink: 0;
+    position: relative; /* Diperlukan untuk tombol bantuan */
+}
+
+/* PENAMBAHAN: Style untuk tombol bantuan 50:50 */
+.help-container {
+    position: absolute;
+    top: 50%;
+    right: 20px;
+    transform: translateY(-50%);
+    display: flex;
+    gap: 10px;
+}
+
+.help-button {
+    background-color: var(--secondary-color);
+    color: var(--text-dark);
+    border: none;
+    border-radius: 50px;
+    padding: 10px 20px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.help-button:hover:not(:disabled) {
+    transform: scale(1.05);
+    box-shadow: 0 4px 15px rgba(255,193,7,0.4);
+}
+
+.help-button:disabled {
+    background-color: var(--disabled-color);
+    color: var(--text-light);
+    cursor: not-allowed;
+    opacity: 0.7;
 }
 
 .title-group h1 {
@@ -95,27 +130,15 @@ header {
     align-items: center;
 }
 
-.chat-message {
-    width: 100%;
-    animation: fadeIn 0.5s ease;
-}
-
-@keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-
-.ai-system-message {
-    font-size: 1.2rem;
-    font-weight: 700;
-    color: var(--primary-color);
-    text-align: center;
-    padding: 20px;
-}
-
 .question-box {
     background: #fff;
     border: 1px solid var(--border-color);
     padding: 25px;
     border-radius: 16px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    width: 100%;
+    max-width: 600px;
+    box-sizing: border-box;
 }
 .question-text {
     font-weight: 700;
@@ -144,6 +167,11 @@ header {
     font-size: 0.95rem;
 }
 
+.choice-button.hide {
+    opacity: 0;
+    pointer-events: none;
+}
+
 .choice-button:hover:not(:disabled) {
     background-color: var(--secondary-color);
     border-color: var(--secondary-color);
@@ -156,7 +184,6 @@ header {
 }
 .choice-button:disabled {
     cursor: not-allowed;
-    filter: grayscale(80%);
 }
 .choice-button.correct {
     background-color: var(--correct-answer);
@@ -239,45 +266,12 @@ header {
     color: var(--primary-color);
 }
 
-/* Modal Awal */
-.modal-overlay {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex;
-    justify-content: center; align-items: center; z-index: 1000;
-    transition: opacity 0.5s ease, visibility 0.5s;
-    background-color: rgba(0,0,0,0.5);
-}
-.modal-overlay.hidden { opacity: 0; visibility: hidden; }
-
-.start-content {
-    text-align: center; padding: 40px; background: #fff;
-    border-radius: 24px; box-shadow: var(--shadow);
-    max-width: 90%; width: 500px;
-    animation: popUp 0.6s cubic-bezier(0.165, 0.84, 0.44, 1) forwards;
-}
-@keyframes popUp { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
-
-.start-title-container p:nth-child(1) {
-    font-size: 2.5rem; font-weight: 900; color: var(--primary-color);
-}
-.start-title-container p:nth-child(2) {
-    font-size: 1.1rem; font-weight: 700; color: var(--text-dark);
-}
-.info-box { font-size: 1rem; color: var(--text-dark); margin: 20px 0 30px; }
-
-.start-content .modal-button {
-    background: var(--primary-color);
-    color: white; border: none; padding: 18px 30px; border-radius: 50px;
-    cursor: pointer; font-size: 1.1rem; font-weight: 700;
-    transition: all 0.3s ease;
-}
-.start-content .modal-button:hover { transform: translateY(-5px); box-shadow: 0 5px 15px rgba(0,123,255,0.3); }
-
-
 /* Responsivitas */
 @media (max-width: 992px) {
     body {
         padding: 0;
-        overflow: auto; /* Allow body to scroll on small screens */
+        overflow-y: auto; /* Izinkan scroll vertikal di mobile */
+        height: auto;
     }
     #game-layout {
         flex-direction: column;
@@ -290,29 +284,54 @@ header {
         border-radius: 0;
         border-left: none;
         border-right: none;
+        min-height: 60vh;
     }
     .scoreboard-container {
         order: 1;
         width: 100%;
         box-sizing: border-box;
-        height: auto; /* Allow height to be determined by content */
-        max-height: 40vh; /* Limit height to 40% of viewport */
+        height: auto;
+        max-height: 40vh;
         border-radius: 0;
         border-top: none;
     }
     .prize-list {
-        /* Papan skor tetap vertikal dan bisa di-scroll */
         flex-direction: column-reverse;
         overflow-y: auto;
+    }
+    .help-container {
+        position: static;
+        transform: none;
+        justify-content: center;
+        padding: 10px 0;
     }
 }
 
 @media (max-width: 768px) {
+    .start-content h1 {
+        font-size: 2rem !important;
+    }
+    .start-content p {
+        font-size: 1.2rem !important;
+    }
+    #host-welcome-speech {
+        font-size: 1rem !important;
+    }
+    #start-game-btn {
+        font-size: 1.2rem;
+        padding: 15px 30px;
+    }
     .choice-container {
         grid-template-columns: 1fr;
     }
     .prize-tier {
         font-size: 0.85rem;
         padding: 8px 12px;
+    }
+    .title-group h1 {
+        font-size: 1.2rem;
+    }
+    .title-group p {
+        font-size: 0.9rem;
     }
 }
