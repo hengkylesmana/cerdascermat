@@ -1,7 +1,7 @@
 /**
  * HAFIZH GAMES - game.js
- * Versi: 12.6
- * Deskripsi: PENYEMPURNAAN FITUR - Menambahkan opsi bantuan 50:50 dan perbaikan responsif.
+ * Versi: 12.7
+ * Deskripsi: PENYEMPURNAAN FITUR - Menambahkan timer 15 detik untuk menjawab.
  */
 document.addEventListener('DOMContentLoaded', () => {
     // Elemen DOM
@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const gameLayout = document.getElementById('game-layout');
     const hostWelcomeSpeech = document.getElementById('host-welcome-speech');
     const fiftyFiftyBtn = document.getElementById('fifty-fifty-btn');
+    const timerDisplay = document.getElementById('timer-display'); // Elemen Timer
 
     // Helper function untuk jeda
     const delay = ms => new Promise(res => setTimeout(res, ms));
@@ -38,7 +39,8 @@ document.addEventListener('DOMContentLoaded', () => {
         isPlaying: false,
         selectedAnswerIndex: null,
         questionHistory: [],
-        fiftyFiftyUsed: 0, // PENAMBAHAN: Melacak penggunaan 50:50
+        fiftyFiftyUsed: 0,
+        questionTimer: null, // PENAMBAHAN: Untuk menyimpan ID interval timer
     };
 
     function speak(text, onEndCallback = () => {}) {
@@ -49,10 +51,49 @@ document.addEventListener('DOMContentLoaded', () => {
         window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(text.replace(/<[^>]*>/g, ''));
         utterance.lang = 'id-ID';
-        utterance.rate = 1.2; // Sedikit lebih cepat
+        utterance.rate = 1.2;
         utterance.pitch = 1.0;
         utterance.onend = onEndCallback;
         window.speechSynthesis.speak(utterance);
+    }
+
+    // FUNGSI BARU: Logika untuk timer
+    function startTimer() {
+        stopTimer(); // Hentikan timer sebelumnya jika ada
+        let timeLeft = 15;
+        timerDisplay.textContent = timeLeft;
+        timerDisplay.classList.remove('warning');
+
+        gameState.questionTimer = setInterval(() => {
+            timeLeft--;
+            timerDisplay.textContent = timeLeft;
+            if (timeLeft <= 5 && timeLeft > 0) {
+                timerDisplay.classList.add('warning');
+            }
+            if (timeLeft <= 0) {
+                handleTimeUp();
+            }
+        }, 1000);
+    }
+
+    function stopTimer() {
+        clearInterval(gameState.questionTimer);
+    }
+
+    async function handleTimeUp() {
+        stopTimer();
+        document.querySelectorAll('.choice-button').forEach(btn => btn.disabled = true);
+        fiftyFiftyBtn.disabled = true;
+        
+        statusDiv.textContent = "WAKTU HABIS! Permainan berakhir.";
+        speak("Waktu habis!");
+        
+        const correctIndex = gameState.currentQuestion.correct_answer_index;
+        const correctButton = document.querySelector(`.choice-button[data-index='${correctIndex}']`);
+        if(correctButton) correctButton.classList.add('correct');
+
+        await delay(2000);
+        displayGameOver(false);
     }
 
     async function fetchOpeningSpeech() {
@@ -80,7 +121,6 @@ document.addEventListener('DOMContentLoaded', () => {
             startGameBtn.textContent = "Memuat...";
             try {
                 await Tone.start();
-                console.log("AudioContext berhasil dimulai oleh pengguna.");
             } catch (e) {
                 console.error("Gagal memulai AudioContext:", e);
             }
@@ -108,7 +148,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function initializeGame() {
         startScreen.style.display = 'none';
         gameLayout.style.display = 'flex';
-        gameState = { level: 0, currentQuestion: null, isGameOver: false, isPlaying: true, selectedAnswerIndex: null, questionHistory: [], fiftyFiftyUsed: 0 };
+        gameState = { level: 0, currentQuestion: null, isGameOver: false, isPlaying: true, selectedAnswerIndex: null, questionHistory: [], fiftyFiftyUsed: 0, questionTimer: null };
         updateHeader();
         updatePrizeLadderUI();
         updateHelpButtons();
@@ -134,10 +174,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (gameState.isGameOver) return;
         chatContainer.innerHTML = '';
         statusDiv.textContent = "Bang Hafizh lagi siapin pertanyaan...";
-        updateHelpButtons(); // Perbarui status tombol bantuan untuk pertanyaan baru
+        updateHelpButtons();
 
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000);
+        const fetchTimeout = setTimeout(() => controller.abort(), 15000);
 
         try {
             const response = await fetch('/api/chat', {
@@ -152,7 +192,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }),
                 signal: controller.signal
             });
-            clearTimeout(timeoutId);
+            clearTimeout(fetchTimeout);
             if (!response.ok) throw new Error(`Server merespons dengan status ${response.status}`);
             
             gameState.currentQuestion = await response.json();
@@ -163,9 +203,11 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const prizeText = prizeTiers[gameState.level].label;
             const questionText = gameState.currentQuestion.question;
-            speak(`Pertanyaan untuk ${prizeText}. ${questionText}`);
+            speak(`Pertanyaan untuk ${prizeText}. ${questionText}`, () => {
+                startTimer(); // Mulai timer setelah pertanyaan selesai dibacakan
+            });
         } catch (error) {
-            clearTimeout(timeoutId);
+            clearTimeout(fetchTimeout);
             console.error("Fetch Gagal:", error);
             const errorMessage = error.name === 'AbortError' ? "Bang Hafizh tidak merespons." : "Gagal menghubungi Bang Hafizh.";
             displayError(errorMessage + " Silakan coba lagi.");
@@ -196,7 +238,6 @@ document.addEventListener('DOMContentLoaded', () => {
         chatContainer.appendChild(messageElement);
     }
     
-    // FUNGSI BARU: Logika untuk bantuan 50:50
     function useFiftyFifty() {
         if (gameState.fiftyFiftyUsed >= 2 || !gameState.currentQuestion || document.querySelector('.choice-button:disabled')) return;
 
@@ -208,15 +249,12 @@ document.addEventListener('DOMContentLoaded', () => {
         
         let wrongChoices = choices.filter(c => parseInt(c.dataset.index) !== correctIndex);
         
-        // Acak pilihan yang salah
         wrongChoices.sort(() => Math.random() - 0.5);
 
-        // Sembunyikan 2 dari pilihan yang salah
         wrongChoices[0].classList.add('hide');
         wrongChoices[1].classList.add('hide');
     }
 
-    // FUNGSI BARU: Memperbarui status tombol bantuan
     function updateHelpButtons() {
         fiftyFiftyBtn.textContent = `50:50 (${2 - gameState.fiftyFiftyUsed})`;
         if (gameState.fiftyFiftyUsed >= 2) {
@@ -244,8 +282,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function handleAnswer(selectedButton) {
+        stopTimer(); // Langsung hentikan timer saat jawaban dipilih
         document.querySelectorAll('.choice-button').forEach(btn => btn.disabled = true);
-        fiftyFiftyBtn.disabled = true; // Nonaktifkan bantuan setelah menjawab
+        fiftyFiftyBtn.disabled = true;
         selectedButton.classList.add('selected');
         
         const selectedIndex = parseInt(selectedButton.dataset.index);
