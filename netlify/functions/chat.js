@@ -1,7 +1,7 @@
 /**
  * HAFIZH GAMES - chat.js (Netlify Function)
- * Versi: 2.2
- * Deskripsi: Backend AI dengan karakter host yang lebih bersemangat.
+ * Versi: 2.3
+ * Deskripsi: Penambahan fitur sambutan pembuka dari host.
  */
 const fetch = require('node-fetch');
 require('dotenv').config();
@@ -34,12 +34,24 @@ exports.handler = async (event) => {
     try {
         const { action, payload } = JSON.parse(event.body);
 
+        // AKSI BARU: Mendapatkan sambutan pembuka
+        if (action === 'GET_OPENING_SPEECH') {
+            const prompt = `Anda adalah "Bang Hafizh", host kuis "SIAPA MAU JADI DERMAWAN" yang SUPER SEMANGAT, ENERJIK, dan PROVOKATIF. 
+            Tugas Anda: Buat sebuah paragraf sambutan pembuka yang singkat (2-3 kalimat) untuk menyambut pemain. 
+            Buat semenarik dan seheboh mungkin untuk membakar semangat mereka! Gunakan HURUF KAPITAL dan TANDA SERU!
+            Contoh: "SELAMAT DATANG PARA CALON DERMAWAN! SAYA BANG HAFIZH SIAP MENGUJI NYALI DAN PENGETAHUAN ANDA! BUKTIKAN KALAU ANDA LAYAK MEMBAWA PULANG 1 MILIAR RUPIAH! BERANIIII?! AYO KITA MULAI!"
+            Berikan hanya teks sambutannya saja.`;
+            
+            const requestPayload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
+            const data = await callGemini(requestPayload);
+            const speech = data.candidates[0].content.parts[0].text;
+            return { statusCode: 200, body: JSON.stringify({ speech }) };
+        }
+
         if (action === 'GET_QUESTION') {
             const { level } = payload;
             const difficulty = level < 5 ? "sangat mudah" : (level < 10 ? "menengah" : "sulit dan menjebak");
-            
             const systemPrompt = `Anda adalah pembuat soal super kreatif untuk kuis "SIAPA MAU JADI DERMAWAN". Buat 1 pertanyaan pengetahuan umum (sains, sejarah, geografi, teknologi, seni, olahraga, budaya pop) yang cocok untuk anak SD dan Remaja di Indonesia. Tingkat kesulitan: ${difficulty}. Pastikan jawabannya faktual, tidak ambigu, dan menarik. Berikan 4 pilihan jawaban. Sertakan juga satu "fun fact" singkat terkait jawaban yang benar.`;
-            
             const requestPayload = {
                 contents: [{ role: "user", parts: [{ text: systemPrompt }] }],
                 generationConfig: {
@@ -56,7 +68,6 @@ exports.handler = async (event) => {
                     }
                 }
             };
-            
             const data = await callGemini(requestPayload);
             const questionData = JSON.parse(data.candidates[0].content.parts[0].text);
             return { statusCode: 200, body: JSON.stringify(questionData) };
@@ -64,38 +75,13 @@ exports.handler = async (event) => {
 
         if (action === 'GET_HOST_COMMENTARY') {
             const { question, userAnswer, correctAnswer, isCorrect } = payload;
-            
-            // PROMPT BARU DENGAN KARAKTER LEBIH SEMANGAT
-            const prompt = `
-            Anda adalah "Bang Hafizh", host kuis "SIAPA MAU JADI DERMAWAN" yang SUPER SEMANGAT, ENERJIK, dan SUKA BERTERIAK untuk menyemangati peserta.
-            
-            Konteks:
-            - Pertanyaan: "${question}"
-            - Jawaban Pemain: "${userAnswer}"
-            - Jawaban Benar: "${correctAnswer}"
-            
-            Tugas Anda: Berikan komentar singkat (1-2 kalimat) sesuai kondisi di bawah. Gunakan HURUF KAPITAL dan TANDA SERU untuk menunjukkan semangat membara!
-            
+            const prompt = `Anda adalah "Bang Hafizh", host kuis "SIAPA MAU JADI DERMAWAN" yang SUPER SEMANGAT dan ENERJIK. Berikan komentar singkat (1-2 kalimat) berdasarkan konteks berikut. Gunakan HURUF KAPITAL dan TANDA SERU!
+            Konteks: Pertanyaan "${question}", Jawaban Pemain "${userAnswer}", Jawaban Benar "${correctAnswer}".
             Kondisi: Jawaban pemain ${isCorrect ? 'BENAR' : 'SALAH'}.
-            
-            Jika BENAR:
-            - Beri selamat dengan teriakan! Gunakan kata-kata seperti "DAHSYAT!", "LUAR BIASA!", "BETUL SEKALI!", "ANDA HEBAT!".
-            - Ajak pemain untuk bersiap ke level selanjutnya dengan penuh semangat.
-            - Contoh: "BOOM! JAWABAN ANDA TEPAT SEKALI! LIHAT PAPAN SKOR, ANDA SEMAKIN DEKAT DENGAN 1 MILIAR! LANJUTKAN!"
-            
-            Jika SALAH:
-            - Beri semangat, jangan menjatuhkan, tapi tetap dengan nada yang dramatis. Gunakan kata-kata seperti "YAAAHHH, SAYANG SEKALI...", "ADUUUH, HAMPIIR SAJA!".
-            - Ungkapkan jawaban yang benar.
-            - Ajak untuk tidak menyerah dengan teriakan.
-            - Contoh: "OH, TIDAK! Sedikit lagi! Jawaban yang benar adalah ${correctAnswer}. TAPI PERJUANGAN BELUM BERAKHIR! JANGAN MENYERAH!"
-            
-            Berikan hanya komentarnya saja, tanpa embel-embel lain.
-            `;
-
-            const requestPayload = {
-                contents: [{ role: "user", parts: [{ text: prompt }] }]
-            };
-
+            Jika BENAR, beri selamat dengan teriakan (Contoh: "DAHSYAT! TEPAT SEKALI! LANJUTKAN!").
+            Jika SALAH, beri semangat dan sebutkan jawaban yang benar (Contoh: "YAAH, SAYANG SEKALI! Jawaban yang benar adalah ${correctAnswer}. JANGAN MENYERAH!").
+            Berikan hanya komentarnya saja.`;
+            const requestPayload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
             const data = await callGemini(requestPayload);
             const commentary = data.candidates[0].content.parts[0].text;
             return { statusCode: 200, body: JSON.stringify({ commentary }) };
