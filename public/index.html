@@ -35,13 +35,12 @@
             max-width: 600px;
         }
         
-        /* PENAMBAHAN: Style untuk sambutan host */
         #host-welcome-speech {
             font-size: 1.2rem;
             font-weight: 700;
             color: var(--text-dark);
             margin: 30px 0;
-            min-height: 50px; /* Memberi ruang agar tidak lompat saat teks dimuat */
+            min-height: 50px;
             line-height: 1.6;
         }
 
@@ -64,7 +63,7 @@
         }
 
         #game-layout {
-            display: none; /* Game disembunyikan pada awalnya */
+            display: none;
         }
     </style>
 </head>
@@ -79,45 +78,41 @@
                 <h1 style="font-size: 2.5rem; color: var(--primary-color); margin: 20px 0;">SIAPA MAU JADI DERMAWAN</h1>
             </div>
             
-            <!-- PENAMBAHAN: Elemen untuk menampilkan sambutan host -->
             <p id="host-welcome-speech">Bang Hafizh sedang bersiap-siap...</p>
 
             <button id="start-game-btn">Mulai Permainan</button>
         </div>
     </div>
 
-    <!-- Tata Letak Utama Game -->
     <div id="game-layout">
-        <!-- Kolom Game Utama -->
         <div class="container">
             <header>
                 <div class="title-group">
                     <h1 id="header-title">SIAPA MAU JADI DERMAWAN</h1>
                     <p id="header-subtitle">Memulai permainan...</p>
                 </div>
+                <!-- PENAMBAHAN: Kontainer untuk tombol bantuan -->
+                <div class="help-container">
+                    <button class="help-button" id="fifty-fifty-btn">50 : 50</button>
+                </div>
             </header>
 
             <div class="chat-container" id="chat-container">
-                <!-- Pertanyaan akan dimuat di sini oleh JavaScript -->
             </div>
             
             <div id="status" class="status-info"></div>
         </div>
 
-        <!-- Kolom Papan Skor Hadiah -->
         <div class="scoreboard-container">
             <h2 class="scoreboard-title">PAPAN HADIAH</h2>
             <ul class="prize-list" id="prize-list">
-                <!-- Daftar hadiah akan diisi oleh JavaScript -->
             </ul>
         </div>
     </div>
     
-    <!-- Pustaka Confetti & Tone.js untuk Suara -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
     
-    <!-- File Logika Game -->
     <script src="game.js"></script>
 </body>
 </html>
