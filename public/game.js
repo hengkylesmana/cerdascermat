@@ -1,8 +1,7 @@
 /**
  * HAFIZH GAMES - game.js
- * Versi: 12.5
- * Deskripsi: PENYEMPURNAAN FITUR - Menambahkan histori pertanyaan untuk variasi soal.
- * - Mengirim histori pertanyaan ke backend agar tidak ada soal yang berulang.
+ * Versi: 12.6
+ * Deskripsi: PENYEMPURNAAN FITUR - Menambahkan opsi bantuan 50:50 dan perbaikan responsif.
  */
 document.addEventListener('DOMContentLoaded', () => {
     // Elemen DOM
@@ -15,6 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const startGameBtn = document.getElementById('start-game-btn');
     const gameLayout = document.getElementById('game-layout');
     const hostWelcomeSpeech = document.getElementById('host-welcome-speech');
+    const fiftyFiftyBtn = document.getElementById('fifty-fifty-btn');
 
     // Helper function untuk jeda
     const delay = ms => new Promise(res => setTimeout(res, ms));
@@ -37,7 +37,8 @@ document.addEventListener('DOMContentLoaded', () => {
         isGameOver: false,
         isPlaying: false,
         selectedAnswerIndex: null,
-        questionHistory: [], // PENAMBAHAN: Menyimpan histori pertanyaan
+        questionHistory: [],
+        fiftyFiftyUsed: 0, // PENAMBAHAN: Melacak penggunaan 50:50
     };
 
     function speak(text, onEndCallback = () => {}) {
@@ -48,7 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
         window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(text.replace(/<[^>]*>/g, ''));
         utterance.lang = 'id-ID';
-        utterance.rate = 1.1;
+        utterance.rate = 1.2; // Sedikit lebih cepat
         utterance.pitch = 1.0;
         utterance.onend = onEndCallback;
         window.speechSynthesis.speak(utterance);
@@ -88,6 +89,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 initializeGame();
             });
         });
+
+        fiftyFiftyBtn.addEventListener('click', useFiftyFifty);
     }
 
     function populatePrizeList() {
@@ -105,10 +108,10 @@ document.addEventListener('DOMContentLoaded', () => {
     function initializeGame() {
         startScreen.style.display = 'none';
         gameLayout.style.display = 'flex';
-        // Reset state termasuk histori
-        gameState = { level: 0, currentQuestion: null, isGameOver: false, isPlaying: true, selectedAnswerIndex: null, questionHistory: [] };
+        gameState = { level: 0, currentQuestion: null, isGameOver: false, isPlaying: true, selectedAnswerIndex: null, questionHistory: [], fiftyFiftyUsed: 0 };
         updateHeader();
         updatePrizeLadderUI();
+        updateHelpButtons();
         fetchNextQuestion();
     }
     
@@ -131,6 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (gameState.isGameOver) return;
         chatContainer.innerHTML = '';
         statusDiv.textContent = "Bang Hafizh lagi siapin pertanyaan...";
+        updateHelpButtons(); // Perbarui status tombol bantuan untuk pertanyaan baru
 
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 15000);
@@ -139,7 +143,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch('/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                // PENAMBAHAN: Mengirim level dan histori pertanyaan
                 body: JSON.stringify({ 
                     action: 'GET_QUESTION', 
                     payload: { 
@@ -153,7 +156,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!response.ok) throw new Error(`Server merespons dengan status ${response.status}`);
             
             gameState.currentQuestion = await response.json();
-            // PENAMBAHAN: Simpan pertanyaan baru ke histori
             gameState.questionHistory.push(gameState.currentQuestion.question);
 
             statusDiv.textContent = "";
@@ -193,17 +195,43 @@ document.addEventListener('DOMContentLoaded', () => {
         messageElement.appendChild(questionBox);
         chatContainer.appendChild(messageElement);
     }
+    
+    // FUNGSI BARU: Logika untuk bantuan 50:50
+    function useFiftyFifty() {
+        if (gameState.fiftyFiftyUsed >= 2 || !gameState.currentQuestion || document.querySelector('.choice-button:disabled')) return;
+
+        gameState.fiftyFiftyUsed++;
+        updateHelpButtons();
+
+        const correctIndex = gameState.currentQuestion.correct_answer_index;
+        const choices = Array.from(document.querySelectorAll('.choice-button'));
+        
+        let wrongChoices = choices.filter(c => parseInt(c.dataset.index) !== correctIndex);
+        
+        // Acak pilihan yang salah
+        wrongChoices.sort(() => Math.random() - 0.5);
+
+        // Sembunyikan 2 dari pilihan yang salah
+        wrongChoices[0].classList.add('hide');
+        wrongChoices[1].classList.add('hide');
+    }
+
+    // FUNGSI BARU: Memperbarui status tombol bantuan
+    function updateHelpButtons() {
+        fiftyFiftyBtn.textContent = `50:50 (${2 - gameState.fiftyFiftyUsed})`;
+        if (gameState.fiftyFiftyUsed >= 2) {
+            fiftyFiftyBtn.disabled = true;
+        } else {
+            fiftyFiftyBtn.disabled = false;
+        }
+    }
 
     async function getAndSpeakHostCommentary(isCorrect) {
         try {
-            const payload = {
-                isCorrect: isCorrect
-            };
-
             const response = await fetch('/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'GET_HOST_COMMENTARY', payload })
+                body: JSON.stringify({ action: 'GET_HOST_COMMENTARY', payload: { isCorrect } })
             });
             if (!response.ok) return;
             const data = await response.json();
@@ -217,6 +245,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function handleAnswer(selectedButton) {
         document.querySelectorAll('.choice-button').forEach(btn => btn.disabled = true);
+        fiftyFiftyBtn.disabled = true; // Nonaktifkan bantuan setelah menjawab
         selectedButton.classList.add('selected');
         
         const selectedIndex = parseInt(selectedButton.dataset.index);
