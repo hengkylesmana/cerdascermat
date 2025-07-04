@@ -1,9 +1,9 @@
 /**
  * HAFIZH GAMES - game.js
- * Versi: 12.1
- * Deskripsi: PERBAIKAN KRITIS - Mengatasi masalah AudioContext dan error loading suara.
- * - Memastikan AudioContext dimulai HANYA setelah klik pengguna.
- * - Membuat game tetap berjalan meskipun file suara gagal dimuat (error 404).
+ * Versi: 12.2
+ * Deskripsi: PERBAIKAN FINAL - Membuat penanganan error audio menjadi lebih tangguh.
+ * - Mencegah aplikasi crash total ketika file suara (MP3) tidak ditemukan (error 404).
+ * - Memastikan alur game tetap berjalan mulus tanpa efek suara jika loading gagal.
  */
 document.addEventListener('DOMContentLoaded', () => {
     // Elemen DOM
@@ -41,7 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let sounds;
     let audioReady = false;
 
-    // PERBAIKAN: Fungsi setupAudio dibuat lebih tangguh
+    // PERBAIKAN: Fungsi setupAudio dibuat lebih tangguh untuk menangani promise rejection
     function setupAudio() {
         try {
             // URL file suara perlu diperbaiki jika masih 404
@@ -50,14 +50,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 wrong: new Tone.Player("https://firebasestorage.googleapis.com/v0/b/rasa-426813.appspot.com/o/wrong.mp3?alt=media&token=3852899a-3286-4448-a0b4-7b44383a54d4").toDestination(),
                 wait: new Tone.Synth({ oscillator: { type: "sine" }, envelope: { attack: 0.005, decay: 0.1, sustain: 0.3, release: 1 } }).toDestination()
             };
-            // Cek apakah buffer suara berhasil dimuat
-            Promise.all([sounds.correct.loaded, sounds.wrong.loaded]).then(() => {
-                console.log("File suara berhasil dimuat.");
-                audioReady = true;
-            }).catch(() => {
-                console.warn("Gagal memuat file suara (mungkin karena error 404). Game akan berjalan tanpa efek suara.");
-                audioReady = false; // Pastikan audioReady false jika gagal
-            });
+            
+            // PERBAIKAN KRITIS: Menunggu semua promise loading suara selesai.
+            // .catch() akan menangani jika SALAH SATU file gagal dimuat (misal: 404 Not Found)
+            Promise.all([sounds.correct.loaded, sounds.wrong.loaded])
+                .then(() => {
+                    console.log("File suara berhasil dimuat.");
+                    audioReady = true;
+                })
+                .catch((error) => {
+                    // Blok ini akan mencegah aplikasi crash
+                    console.warn("Gagal memuat file suara, game akan berjalan tanpa efek suara.", error);
+                    audioReady = false;
+                    // Hapus player yang error agar tidak coba diputar
+                    sounds.correct = null;
+                    sounds.wrong = null;
+                });
+
         } catch (e) {
             console.error("Gagal menginisialisasi Tone.js:", e);
             audioReady = false;
@@ -76,16 +85,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function init() {
         populatePrizeList();
-        // PERBAIKAN: Event listener dipisahkan untuk kejelasan
         startGameBtn.addEventListener('click', async () => {
-            // PERBAIKAN KRITIS: Tone.start() dipanggil TEPAT di dalam event click
             try {
                 await Tone.start();
                 console.log("AudioContext berhasil dimulai oleh pengguna.");
             } catch (e) {
                 console.error("Gagal memulai AudioContext:", e);
             }
-            // Lanjutkan dengan memulai game
             initializeGame();
         });
     }
@@ -135,7 +141,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (gameState.isGameOver) return;
         chatContainer.innerHTML = '';
         statusDiv.textContent = "Bang Hafizh lagi siapin pertanyaan...";
-        // PERBAIKAN: Hanya mainkan suara jika audio siap
         if (audioReady && sounds && sounds.wait) {
             sounds.wait.triggerAttackRelease("C4", "8n");
         }
@@ -207,7 +212,6 @@ document.addEventListener('DOMContentLoaded', () => {
         correctButton.classList.add('correct');
 
         if (isCorrect) {
-            // PERBAIKAN: Hanya mainkan suara jika audio siap
             if (audioReady && sounds && sounds.correct) sounds.correct.start();
             confetti({ particleCount: 150, spread: 90, origin: { y: 0.6 } });
             statusDiv.textContent = "BENAR! Jawaban Anda tepat sekali!";
@@ -221,7 +225,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } else {
             selectedButton.classList.add('incorrect');
-            // PERBAIKAN: Hanya mainkan suara jika audio siap
             if (audioReady && sounds && sounds.wrong) sounds.wrong.start();
             statusDiv.textContent = "SALAH! Permainan berakhir.";
             speak("Salah!");
