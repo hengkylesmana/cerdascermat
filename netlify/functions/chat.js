@@ -1,10 +1,7 @@
 /**
  * HAFIZH GAMES - chat.js (Netlify Function)
- * Versi: 3.0
- * Deskripsi: PENINGKATAN KUALITAS SOAL & HOST
- * - Bank soal dibuat lebih luas dan variatif dengan tingkat kesulitan yang meningkat.
- * - Komentar host dibuat lebih panjang, dinamis, dan bersemangat.
- * - Menambahkan penanganan untuk histori pertanyaan agar tidak berulang.
+ * Versi: 3.1
+ * Deskripsi: Menyesuaikan durasi komentar host menjadi lebih singkat (maksimal 3 detik).
  */
 const fetch = require('node-fetch');
 require('dotenv').config();
@@ -38,11 +35,8 @@ exports.handler = async (event) => {
         const { action, payload } = JSON.parse(event.body);
 
         if (action === 'GET_OPENING_SPEECH') {
-            const prompt = `Anda adalah "Bang Hafizh", host kuis "SIAPA MAU JADI DERMAWAN" yang SUPER SEMANGAT, ENERJIK, dan PROVOKATIF. 
-            Tugas Anda: Buat sebuah paragraf sambutan pembuka yang panjangnya sekitar 3-4 kalimat untuk menyambut pemain. 
-            Buat semenarik dan seheboh mungkin untuk membakar semangat mereka! Gunakan HURUF KAPITAL dan TANDA SERU!
-            Contoh: "SELAMAT DATANG PARA CALON DERMAWAN! SAYA BANG HAFIZH SIAP MENGUJI NYALI DAN PENGETAHUAN ANDA! BUKTIKAN KALAU ANDA LAYAK MEMBAWA PULANG 1 MILIAR RUPIAH! BERANIIII?! AYO KITA MULAI!"
-            Berikan hanya teks sambutannya saja.`;
+            // PENYESUAIAN: Prompt dibuat lebih singkat
+            const prompt = `Anda adalah "Bang Hafizh", host kuis yang SUPER SEMANGAT. Buat 1-2 kalimat sambutan pembuka yang membakar semangat pemain. Gunakan HURUF KAPITAL dan TANDA SERU!`;
             
             const requestPayload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
             const data = await callGemini(requestPayload);
@@ -53,24 +47,20 @@ exports.handler = async (event) => {
         if (action === 'GET_QUESTION') {
             const { level, history } = payload;
             
-            // Logika tingkat kesulitan yang lebih detail
             let difficulty_desc;
-            if (level <= 3) difficulty_desc = "Sangat Mudah (Pengetahuan umum dasar yang diketahui anak-anak, misal nama ibukota, warna bendera).";
-            else if (level <= 6) difficulty_desc = "Mudah (Tokoh kartun, nama hewan, geografi populer Indonesia).";
-            else if (level <= 9) difficulty_desc = "Menengah (Sejarah populer, sains dasar, istilah umum teknologi).";
-            else if (level <= 12) difficulty_desc = "Sulit (Detail spesifik dari sejarah/sains, geografi dunia, karya seni terkenal).";
-            else difficulty_desc = "Sangat Sulit dan Menjebak (Pertanyaan multi-disiplin, topik khusus, atau pertanyaan yang membutuhkan penalaran lebih dalam).";
+            if (level <= 3) difficulty_desc = "Sangat Mudah (Pengetahuan umum dasar).";
+            else if (level <= 6) difficulty_desc = "Mudah (Tokoh populer, geografi Indonesia).";
+            else if (level <= 9) difficulty_desc = "Menengah (Sejarah, sains dasar).";
+            else if (level <= 12) difficulty_desc = "Sulit (Detail spesifik dari sejarah/sains).";
+            else difficulty_desc = "Sangat Sulit dan Menjebak.";
 
-            const systemPrompt = `Anda adalah generator bank soal untuk kuis "SIAPA MAU JADI DERMAWAN" dengan ribuan variasi.
-            Tugas Anda: Buat 1 pertanyaan UNIK yang belum pernah ada di histori.
-            
+            const systemPrompt = `Anda adalah generator soal untuk kuis "SIAPA MAU JADI DERMAWAN".
+            Tugas: Buat 1 pertanyaan UNIK.
             Aturan:
-            1.  **Topik:** Pengetahuan umum (sains, sejarah, geografi, teknologi, seni, olahraga, budaya pop global dan Indonesia).
-            2.  **Tingkat Kesulitan Saat Ini (Level ${level}):** ${difficulty_desc}
-            3.  **Histori Pertanyaan (JANGAN DIULANG):** ${history.join(', ')}
-            4.  **Format Output:** Berikan 4 pilihan jawaban dan "fun fact" singkat terkait jawaban yang benar.
-
-            Pastikan pertanyaan benar-benar baru dan menantang sesuai levelnya.`;
+            1. Topik: Pengetahuan umum (sains, sejarah, geografi, teknologi, seni, olahraga, budaya pop).
+            2. Tingkat Kesulitan (Level ${level}): ${difficulty_desc}
+            3. Histori Pertanyaan (JANGAN DIULANG): ${history.join(', ')}
+            4. Format Output: JSON dengan question, options (4), correct_answer_index, dan fun_fact.`;
             
             const requestPayload = {
                 contents: [{ role: "user", parts: [{ text: systemPrompt }] }],
@@ -97,13 +87,12 @@ exports.handler = async (event) => {
         if (action === 'GET_HOST_COMMENTARY') {
             const { isCorrect } = payload;
             
+            // PENYESUAIAN: Prompt komentar dibuat lebih singkat
             let prompt;
             if (isCorrect) {
-                prompt = `Anda adalah "Bang Hafizh", host kuis yang SUPER SEMANGAT. Pemain baru saja menjawab BENAR. Berikan komentar yang panjang (minimal 3 kalimat) dan penuh semangat. Puji kecerdasan mereka dan bakar semangatnya untuk pertanyaan berikutnya. Gunakan banyak HURUF KAPITAL dan TANDA SERU!
-                Contoh: "LUAR BIASA!! PEMIKIRAN YANG SANGAT CERDAS, SAYA SUKA ITU! PAPAN HADIAH MENANTI ANDA DI DEPAN SANA! FOKUS, DAN JANGAN BIARKAN APAPUN MENGGANGGU ANDA SEKARANG!"`;
+                prompt = `Anda adalah "Bang Hafizh", host kuis yang SUPER SEMANGAT. Pemain baru saja menjawab BENAR. Berikan komentar singkat (1-2 kalimat) yang penuh semangat.`;
             } else {
-                prompt = `Anda adalah "Bang Hafizh", host kuis yang SUPER SEMANGAT tapi juga dramatis. Pemain baru saja menjawab SALAH. Berikan komentar yang panjang (minimal 3 kalimat) yang menunjukkan rasa sayang tapi juga membangkitkan semangat. Sebutkan bahwa permainan berakhir, tapi puji perjuangan mereka. Gunakan banyak HURUF KAPITAL dan TANDA SERU!
-                Contoh: "YAAAAAHHH, SAYANG SEKALI PEMIRSA! BUKAN ITU JAWABANNYA, PADAHAL ANDA SUDAH BEGITU DEKAT! TAPI INGAT, PERJUANGAN ANDA HARI INI SANGAT LUAR BIASA! JANGAN PERNAH MENYERAH!"`;
+                prompt = `Anda adalah "Bang Hafizh", host kuis yang dramatis. Pemain baru saja menjawab SALAH. Berikan komentar singkat (1-2 kalimat) yang menunjukkan rasa sayang tapi juga membangkitkan semangat.`;
             }
 
             const requestPayload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
