@@ -1,9 +1,9 @@
 /**
  * HAFIZH GAMES - game.js
- * Versi: 12.2
- * Deskripsi: PERBAIKAN FINAL - Membuat penanganan error audio menjadi lebih tangguh.
- * - Mencegah aplikasi crash total ketika file suara (MP3) tidak ditemukan (error 404).
- * - Memastikan alur game tetap berjalan mulus tanpa efek suara jika loading gagal.
+ * Versi: 12.3
+ * Deskripsi: PERBAIKAN FINAL - Menghilangkan total pemanggilan file suara (MP3) yang error.
+ * - Sesuai permintaan, perintah untuk memutar suara 'benar' dan 'salah' dihapus sepenuhnya.
+ * - Ini menjamin game tidak akan macet lagi karena masalah audio.
  */
 document.addEventListener('DOMContentLoaded', () => {
     // Elemen DOM
@@ -41,32 +41,15 @@ document.addEventListener('DOMContentLoaded', () => {
     let sounds;
     let audioReady = false;
 
-    // PERBAIKAN: Fungsi setupAudio dibuat lebih tangguh untuk menangani promise rejection
+    // PERBAIKAN: Fungsi audio disederhanakan, hanya menggunakan synth internal
     function setupAudio() {
         try {
-            // URL file suara perlu diperbaiki jika masih 404
+            // HANYA synth untuk suara tunggu yang dibuat, karena tidak butuh file eksternal
             sounds = {
-                correct: new Tone.Player("https://firebasestorage.googleapis.com/v0/b/rasa-426813.appspot.com/o/correct.mp3?alt=media&token=404f2a11-5e20-411a-b054-325b51a84f50").toDestination(),
-                wrong: new Tone.Player("https://firebasestorage.googleapis.com/v0/b/rasa-426813.appspot.com/o/wrong.mp3?alt=media&token=3852899a-3286-4448-a0b4-7b44383a54d4").toDestination(),
                 wait: new Tone.Synth({ oscillator: { type: "sine" }, envelope: { attack: 0.005, decay: 0.1, sustain: 0.3, release: 1 } }).toDestination()
             };
-            
-            // PERBAIKAN KRITIS: Menunggu semua promise loading suara selesai.
-            // .catch() akan menangani jika SALAH SATU file gagal dimuat (misal: 404 Not Found)
-            Promise.all([sounds.correct.loaded, sounds.wrong.loaded])
-                .then(() => {
-                    console.log("File suara berhasil dimuat.");
-                    audioReady = true;
-                })
-                .catch((error) => {
-                    // Blok ini akan mencegah aplikasi crash
-                    console.warn("Gagal memuat file suara, game akan berjalan tanpa efek suara.", error);
-                    audioReady = false;
-                    // Hapus player yang error agar tidak coba diputar
-                    sounds.correct = null;
-                    sounds.wrong = null;
-                });
-
+            audioReady = true; // Langsung set true karena tidak ada file yang perlu di-load
+            console.log("Audio synth siap digunakan.");
         } catch (e) {
             console.error("Gagal menginisialisasi Tone.js:", e);
             audioReady = false;
@@ -112,7 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
         startGameBtn.disabled = true;
         startGameBtn.textContent = "Memuat...";
         
-        setupAudio(); // Setup audio, tapi tidak memblokir game jika gagal
+        setupAudio(); // Setup audio yang sudah disederhanakan
         
         startScreen.style.display = 'none';
         gameLayout.style.display = 'flex';
@@ -212,7 +195,7 @@ document.addEventListener('DOMContentLoaded', () => {
         correctButton.classList.add('correct');
 
         if (isCorrect) {
-            if (audioReady && sounds && sounds.correct) sounds.correct.start();
+            // PERBAIKAN: Perintah memutar suara 'correct' DIHAPUS
             confetti({ particleCount: 150, spread: 90, origin: { y: 0.6 } });
             statusDiv.textContent = "BENAR! Jawaban Anda tepat sekali!";
             speak("Benar!");
@@ -225,7 +208,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } else {
             selectedButton.classList.add('incorrect');
-            if (audioReady && sounds && sounds.wrong) sounds.wrong.start();
+            // PERBAIKAN: Perintah memutar suara 'wrong' DIHAPUS
             statusDiv.textContent = "SALAH! Permainan berakhir.";
             speak("Salah!");
             await delay(2000);
