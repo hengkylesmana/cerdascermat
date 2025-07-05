@@ -1,9 +1,8 @@
 /**
  * HAFIZH GAMES - game.js
- * Versi: 13.0
+ * Versi: 13.1
  * Deskripsi: Implementasi Multi-Mode Game (Dermawan & Cerdas Cermat).
- * - Merestrukturisasi kode menjadi objek terpisah untuk setiap mode game.
- * - Mengimplementasikan logika lengkap untuk mode Cerdas Cermat.
+ * - Menambahkan penanganan error yang lebih baik untuk masalah 500 Internal Server Error.
  */
 document.addEventListener('DOMContentLoaded', () => {
     // === ELEMEN DOM GLOBAL ===
@@ -134,7 +133,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ action: 'GET_QUESTION', payload: { level: this.state.level + 1, history: this.state.questionHistory } }),
                 });
-                if (!response.ok) throw new Error('Server error');
+                // PERBAIKAN: Cek jika response tidak OK (misal: error 500)
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Server Error: ${response.status} - ${errorText}`);
+                }
                 this.state.currentQuestion = await response.json();
                 this.state.questionHistory.push(this.state.currentQuestion.question);
                 this.elements.statusDiv.textContent = "";
@@ -142,7 +145,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const prizeText = this.prizeTiers[this.state.level].label;
                 speak(`Pertanyaan untuk ${prizeText}. ${this.state.currentQuestion.question}`, () => this.startTimer());
             } catch (error) {
-                this.displayError("Gagal mengambil pertanyaan.");
+                console.error("Fetch Error:", error);
+                this.displayError(`Gagal mengambil pertanyaan. ${error.message}`);
             }
         },
 
@@ -245,10 +249,11 @@ document.addEventListener('DOMContentLoaded', () => {
         updatePrizeLadderUI() {
             dermawanLayout.querySelectorAll('.prize-tier').forEach((tier, index) => {
                 tier.classList.remove('current');
+                // Perhitungan index dibalik karena list hadiah ditampilkan terbalik (reverse)
                 if (index === (this.prizeTiers.length - 1 - this.state.level)) tier.classList.add('current');
             });
         },
-        displayError(msg) { this.elements.chatContainer.innerHTML = `<div class="question-box" style="text-align:center;">${msg}</div>`; }
+        displayError(msg) { this.elements.chatContainer.innerHTML = `<div class="question-box" style="text-align:center; color: var(--incorrect-answer);">${msg}</div>`; }
     };
 
     // =================================================================================
@@ -323,7 +328,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         payload: { history: this.state.questionHistory }
                     })
                 });
-                if (!response.ok) throw new Error('Gagal mengambil soal.');
+                // PERBAIKAN: Cek jika response tidak OK
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Server Error: ${response.status} - ${errorText}`);
+                }
                 
                 this.state.currentQuestion = await response.json();
                 this.state.questionHistory.push(this.state.currentQuestion.question);
@@ -334,8 +343,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
             } catch (error) {
-                this.elements.questionDisplay.innerHTML = `<p>Oops, terjadi masalah. Coba lagi.</p>`;
-                console.error(error);
+                console.error("Fetch Error:", error);
+                this.elements.questionDisplay.innerHTML = `<p style="color: var(--warning-color);">Oops, terjadi masalah. Coba lagi. <br><small>${error.message}</small></p>`;
             }
         },
 
