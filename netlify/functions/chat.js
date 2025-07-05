@@ -1,14 +1,13 @@
 /**
  * HAFIZH GAMES - chat.js (Netlify Function)
- * Versi: 3.3
- * Deskripsi: Penambahan action untuk soal Cerdas Cermat (open-ended).
+ * Versi: 3.2
+ * Deskripsi: Menambah variasi bank soal menjadi lebih dinamis dan variatif.
  */
 const fetch = require('node-fetch');
 require('dotenv').config();
 
 const GEMINI_API_KEY = process.env.GOOGLE_GEMINI_API_KEY;
 
-// ... (fungsi callGemini tidak berubah)
 async function callGemini(payload) {
     const geminiApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
     const response = await fetch(geminiApiUrl, {
@@ -24,7 +23,6 @@ async function callGemini(payload) {
     return response.json();
 }
 
-
 exports.handler = async (event) => {
     if (event.httpMethod !== 'POST') {
         return { statusCode: 405, body: 'Method Not Allowed' };
@@ -36,46 +34,73 @@ exports.handler = async (event) => {
     try {
         const { action, payload } = JSON.parse(event.body);
 
-        // ... (action GET_OPENING_SPEECH, GET_QUESTION, GET_HOST_COMMENTARY tidak berubah)
         if (action === 'GET_OPENING_SPEECH') {
             const prompt = `Anda adalah "Bang Hafizh", host kuis yang SUPER SEMANGAT. Buat 1-2 kalimat sambutan pembuka yang membakar semangat pemain. Gunakan HURUF KAPITAL dan TANDA SERU!`;
+            
             const requestPayload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
             const data = await callGemini(requestPayload);
             const speech = data.candidates[0].content.parts[0].text;
             return { statusCode: 200, body: JSON.stringify({ speech }) };
         }
 
-        if (action === 'GET_QUESTION') { // Untuk Siapa Mau Jadi Dermawan
+        if (action === 'GET_QUESTION') {
             const { level, history } = payload;
-            let difficulty_desc = "mudah";
-            if (level > 5) difficulty_desc = "menengah";
-            if (level > 10) difficulty_desc = "sulit";
-            const systemPrompt = `Buat 1 soal kuis pilihan ganda dari topik pengetahuan umum. Tingkat kesulitan: ${difficulty_desc}. Jangan ulangi pertanyaan ini: ${history.join(', ')}. Format output JSON: { "question": "...", "options": ["...", "...", "...", "..."], "correct_answer_index": ..., "fun_fact": "..." }`;
-            const requestPayload = {
-                contents: [{ role: "user", parts: [{ text: systemPrompt }] }],
-                generationConfig: { responseMimeType: "application/json" }
-            };
-            const data = await callGemini(requestPayload);
-            const questionData = JSON.parse(data.candidates[0].content.parts[0].text);
-            return { statusCode: 200, body: JSON.stringify(questionData) };
-        }
-        
-        // PENAMBAHAN: Action baru untuk Cerdas Cermat
-        if (action === 'GET_CERDAS_CERMAT_QUESTION') {
-            const { history } = payload;
-            const topics = ['Ilmu Pengetahuan', 'Geografi', 'Teknologi', 'Kesehatan', 'Agama Islam', 'Bahasa Asing', 'Flora & Fauna', 'Sejarah', 'Soal Cerita Logika', 'Misteri Detektif'];
+            
+            let difficulty_desc;
+            if (level <= 3) difficulty_desc = "Sangat Mudah (Pengetahuan umum dasar).";
+            else if (level <= 6) difficulty_desc = "Mudah (Topik populer yang banyak diketahui).";
+            else if (level <= 9) difficulty_desc = "Menengah (Membutuhkan pengetahuan lebih spesifik).";
+            else if (level <= 12) difficulty_desc = "Sulit (Detail spesifik atau membutuhkan penalaran).";
+            else difficulty_desc = "Sangat Sulit dan Menjebak (Membutuhkan pengetahuan mendalam atau logika tajam).";
+
+            // PENYEMPURNAAN: Daftar topik yang jauh lebih variatif
+            const topics = [
+                'Ilmu Pengetahuan (Fisika, Kimia, Biologi)', 
+                'Geografi (Dunia & Indonesia)', 
+                'Teknologi & Komputer', 
+                'Kesehatan & Gaya Hidup', 
+                'Agama Islam (Sejarah, Tokoh, Pengetahuan Umum)', 
+                'Pelajaran Bahasa Asing (Terjemahan kata/frasa simpel dari Inggris/Arab/Jepang ke Indonesia)', 
+                'Flora & Fauna (Ciri khas, habitat, fakta unik)', 
+                'Sejarah (Dunia & Indonesia)', 
+                'Soal Cerita Logika (membutuhkan penalaran)', 
+                'Misteri Detektif Singkat (1-2 kalimat kasus, pertanyaannya adalah siapa pelakunya berdasarkan petunjuk)'
+            ];
+            // Memilih topik secara acak untuk setiap pertanyaan
             const randomTopic = topics[Math.floor(Math.random() * topics.length)];
 
-            const systemPrompt = `Anda adalah pembuat soal untuk kuis Cerdas Cermat.
-            Tugas: Buat 1 pertanyaan terbuka (bukan pilihan ganda) yang unik dan menantang dari topik **${randomTopic}**.
-            Histori Pertanyaan (JANGAN DIULANG): ${history.join(', ')}
-            Format Output JSON: { "question": "...", "answer": "..." }
-            Contoh output: { "question": "Siapakah arsitek Masjid Istiqlal di Jakarta?", "answer": "Frederich Silaban" }`;
+            const systemPrompt = `Anda adalah generator bank soal untuk kuis "SIAPA MAU JADI DERMAWAN" dengan ribuan variasi.
+            Tugas Anda: Buat 1 pertanyaan UNIK yang belum pernah ada di histori.
 
+            Aturan:
+            1.  **Topik Pertanyaan:** Gunakan topik **${randomTopic}**.
+            2.  **Tingkat Kesulitan Saat Ini (Level ${level}):** ${difficulty_desc}
+            3.  **Histori Pertanyaan (JANGAN DIULANG):** ${history.join(', ')}
+            4.  **Format Output:** JSON dengan "question", "options" (4), "correct_answer_index", dan "fun_fact".
+            5.  **Instruksi Khusus:**
+                - Untuk "Misteri Detektif", buat kasus singkat dan pertanyaannya adalah tentang menyimpulkan sesuatu dari petunjuk.
+                - Untuk "Soal Cerita Logika", pastikan jawabannya bisa dinalar dari informasi yang diberikan.
+                - Untuk "Bahasa Asing", berikan pertanyaan terjemahan kata atau frasa umum.
+
+            Pastikan pertanyaan benar-benar baru, kreatif, dan menantang sesuai levelnya.`;
+            
             const requestPayload = {
                 contents: [{ role: "user", parts: [{ text: systemPrompt }] }],
-                generationConfig: { responseMimeType: "application/json" }
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            question: { type: "STRING" },
+                            options: { type: "ARRAY", items: { type: "STRING" }, minItems: 4, maxItems: 4 },
+                            correct_answer_index: { type: "NUMBER" },
+                            fun_fact: { type: "STRING" }
+                        },
+                        required: ["question", "options", "correct_answer_index", "fun_fact"]
+                    }
+                }
             };
+            
             const data = await callGemini(requestPayload);
             const questionData = JSON.parse(data.candidates[0].content.parts[0].text);
             return { statusCode: 200, body: JSON.stringify(questionData) };
@@ -83,7 +108,14 @@ exports.handler = async (event) => {
 
         if (action === 'GET_HOST_COMMENTARY') {
             const { isCorrect } = payload;
-            let prompt = isCorrect ? `Pemain menjawab BENAR. Beri komentar singkat (1-2 kalimat) yang penuh semangat.` : `Pemain menjawab SALAH. Beri komentar singkat (1-2 kalimat) yang dramatis tapi membangkitkan semangat.`;
+            
+            let prompt;
+            if (isCorrect) {
+                prompt = `Anda adalah "Bang Hafizh", host kuis yang SUPER SEMANGAT. Pemain baru saja menjawab BENAR. Berikan komentar singkat (1-2 kalimat) yang penuh semangat.`;
+            } else {
+                prompt = `Anda adalah "Bang Hafizh", host kuis yang dramatis. Pemain baru saja menjawab SALAH. Berikan komentar singkat (1-2 kalimat) yang menunjukkan rasa sayang tapi juga membangkitkan semangat.`;
+            }
+
             const requestPayload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
             const data = await callGemini(requestPayload);
             const commentary = data.candidates[0].content.parts[0].text;
